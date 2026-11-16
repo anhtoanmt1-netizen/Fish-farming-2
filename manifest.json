@@ -1,0 +1,17 @@
+{
+  "name": "Ocean Life",
+  "short_name": "Ocean Life",
+  "description": "Trò chơi nuôi cá đại dương: lai tạo, đột biến, sưu tầm 80 loài.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#06182b",
+  "theme_color": "#06182b",
+  "lang": "vi",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

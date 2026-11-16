@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#06182b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Ocean Life</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  html,body{margin:0;height:100%;background:#06182b;overflow:hidden;overscroll-behavior:none;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;font-family:'Montserrat',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+  #app{position:fixed;inset:0}
+  button{font-family:inherit;border:0;cursor:pointer;-webkit-appearance:none;appearance:none}
+  input,select{font-family:inherit}
+  #boot{position:fixed;inset:0;display:grid;place-items:center;color:#9fc4e8;font-weight:700;background:#06182b;z-index:1}
+</style>
+</head>
+<body>
+<div id="app"><div id="boot">Đang mở Ocean Life…</div></div>
+<script>
+/* Bộ giả lập khung "SPXGames" để ocean_ui.js chạy độc lập (không cần app SPX) */
+window.SPXGames = { register: function(def){ window.__oceanDef = def; }, back: function(){}, cur: function(){ return 'ocean'; } };
+document.documentElement.classList.add('oc-standalone');
+</script>
+<script src="ocean_data.js"></script>
+<script src="ocean_art.js"></script>
+<script src="ocean.js"></script>
+<script src="ocean_ui.js"></script>
+<script src="main.js"></script>
+</body>
+</html>

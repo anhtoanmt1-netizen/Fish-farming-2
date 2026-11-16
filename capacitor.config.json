@@ -1,0 +1,7 @@
+{
+  "appId": "vn.oceanlife.game",
+  "appName": "Ocean Life",
+  "webDir": "www",
+  "backgroundColor": "#06182b",
+  "server": { "androidScheme": "https" }
+}
