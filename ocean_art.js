@@ -347,33 +347,46 @@ OA.skyColors = tod => { // tod 0..1: 0 bình minh, .25 ngày, .5 hoàng hôn, .7
   const day = [1, 1.0, .35, 0][i] * (1 - e) + [1, .35, 0, .4][i] * e * 0; return { c: A.map((a, k) => mix(a, B[k], e)), day: cl([.7, 1, .5, .08][i] * (1 - e) + [1, .5, .08, .7][i] * e, 0, 1) };
 };
 OA.bg = function(c, W, H, env){
-  const sk = env.sky, g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, sk.c[0]); g.addColorStop(.5, sk.c[1]); g.addColorStop(1, sk.c[2]); c.fillStyle = g; c.fillRect(0, 0, W, H);
-  // bóng núi/san hô xa
-  c.fillStyle = rgba(sk.c[2], .55); c.beginPath(); c.moveTo(0, H); for(let x = 0; x <= W; x += 40){ c.lineTo(x, env.floor(x) - 70 - 40 * sin(x * .008 + 1) - 25 * sin(x * .02)); } c.lineTo(W, H); c.fill();
-  c.fillStyle = rgba(sk.c[2], .75); for(let i = 0; i < 16; i++){ const x = i * W / 15 + 20 * sin(i * 5), y = env.floor(x) - 20, h = 60 + (i * 53 % 70); c.beginPath(); c.moveTo(x - 10, y); c.quadraticCurveTo(x + sin(env.t * .8 + i) * 8, y - h * .6, x + sin(env.t * .8 + i) * 14, y - h); c.quadraticCurveTo(x + 4, y - h * .5, x + 10, y); c.fill(); }
-  // tia sáng
-  if(sk.day > .08){ const a = .1 * sk.day * env.light; for(let i = 0; i < 6; i++){ const x = W * (.1 + i * .17) + sin(env.t * .25 + i * 2) * 40, w = 40 + 30 * sin(i * 3.1 + env.t * .3); const lg = c.createLinearGradient(x, 0, x + 120, H * .8); lg.addColorStop(0, `rgba(255,255,255,${a * 2})`); lg.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = lg; c.beginPath(); c.moveTo(x, 0); c.lineTo(x + w, 0); c.lineTo(x + w + 220, H * .85); c.lineTo(x + 100, H * .85); c.fill(); } }
-  // cát đáy
-  const sand = mix('#e8c070', '#223055', 1 - cl(sk.day * 1.3, 0, 1) * .85); c.beginPath(); c.moveTo(0, H); for(let x = 0; x <= W; x += 20) c.lineTo(x, env.floor(x)); c.lineTo(W, H); c.closePath(); const sg = c.createLinearGradient(0, H * .75, 0, H); sg.addColorStop(0, sand); sg.addColorStop(1, shade(sand, -.35)); c.fillStyle = sg; c.fill(); c.lineWidth = 3; c.strokeStyle = rgba(shade(sand, .3), .6); c.stroke();
-  c.fillStyle = rgba(shade(sand, -.2), .45); for(let i = 0; i < 40; i++){ const x = (i * 97) % W; c.beginPath(); c.ellipse(x, env.floor(x) + 14 + (i * 31 % 40), 5 + (i % 4) * 3, 2, 0, 0, TAU); c.fill(); }
+  const sk = env.sky, day = sk.day, lt = env.light, t = env.t;
+  // nước: dải màu trời + ngả ngọc lam ở tầng sâu
+  const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, sk.c[0]); g.addColorStop(.45, sk.c[1]); g.addColorStop(1, sk.c[2]); c.fillStyle = g; c.fillRect(0, 0, W, H);
+  // quầng sáng mặt trời/mặt trăng phía trên
+  { const cx = W * (.5 + .12 * sin(t * .05)), rg = c.createRadialGradient(cx, -H * .05, 10, cx, -H * .05, H * .95); rg.addColorStop(0, `rgba(220,252,255,${(.28 * day + .06) * lt})`); rg.addColorStop(.5, `rgba(120,230,240,${.09 * day * lt})`); rg.addColorStop(1, 'rgba(120,230,240,0)'); c.fillStyle = rg; c.fillRect(0, 0, W, H); }
+  // tia sáng xuyên mặt nước (mềm, nhiều lớp)
+  if(day > .08){ const a = .085 * day * lt; for(let i = 0; i < 7; i++){ const x = W * (.04 + i * .15) + sin(t * .22 + i * 2) * 46, w = 36 + 34 * sin(i * 3.1 + t * .3), lg = c.createLinearGradient(x, 0, x + 130, H * .85); lg.addColorStop(0, `rgba(235,255,255,${a * 2.2})`); lg.addColorStop(.6, `rgba(200,250,255,${a * .8})`); lg.addColorStop(1, 'rgba(200,250,255,0)'); c.fillStyle = lg; c.beginPath(); c.moveTo(x, 0); c.lineTo(x + w, 0); c.lineTo(x + w + 240, H * .88); c.lineTo(x + 90, H * .88); c.fill(); } }
+  // dãy đá/san hô xa (sương mù độ sâu)
+  c.fillStyle = rgba(sk.c[2], .42); c.beginPath(); c.moveTo(0, H); for(let x = 0; x <= W; x += 40){ c.lineTo(x, env.floor(x) - 110 - 50 * sin(x * .006 + 2) - 28 * sin(x * .017)); } c.lineTo(W, H); c.fill();
+  c.fillStyle = rgba(sk.c[2], .58); c.beginPath(); c.moveTo(0, H); for(let x = 0; x <= W; x += 40){ c.lineTo(x, env.floor(x) - 70 - 40 * sin(x * .008 + 1) - 25 * sin(x * .02)); } c.lineTo(W, H); c.fill();
+  // rặng san hô mờ phía xa
+  for(let i = 0; i < 18; i++){ const x = i * W / 17 + 22 * sin(i * 5), y = env.floor(x) - 20, h = 56 + (i * 53 % 74), sw = sin(t * .8 + i) * 9; c.fillStyle = rgba(i % 3 ? sk.c[2] : mix(sk.c[2], '#7a5cff', .25), .72); c.beginPath(); c.moveTo(x - 11, y); c.quadraticCurveTo(x + sw * .5, y - h * .6, x + sw * 1.4, y - h); c.quadraticCurveTo(x + 4, y - h * .5, x + 11, y); c.fill(); if(i % 4 === 0){ c.beginPath(); c.moveTo(x - 2, y - h * .35); c.quadraticCurveTo(x + 14 + sw, y - h * .55, x + 20 + sw, y - h * .78); c.lineWidth = 6; c.lineCap = 'round'; c.strokeStyle = c.fillStyle; c.stroke(); } }
+  // sương độ sâu: đáy nước tối và xanh hơn
+  { const fg = c.createLinearGradient(0, H * .35, 0, H); fg.addColorStop(0, rgba(sk.c[1], 0)); fg.addColorStop(1, rgba(mix(sk.c[2], '#041a3a', .5), .5)); c.fillStyle = fg; c.fillRect(0, H * .35, W, H * .65); }
+  // cát đáy: gradient, gợn sóng, caustics
+  const sand = mix('#f0d49a', '#223055', 1 - cl(day * 1.3, 0, 1) * .85); c.beginPath(); c.moveTo(0, H); for(let x = 0; x <= W; x += 20) c.lineTo(x, env.floor(x)); c.lineTo(W, H); c.closePath(); const sg = c.createLinearGradient(0, H * .72, 0, H); sg.addColorStop(0, sand); sg.addColorStop(1, shade(sand, -.4)); c.fillStyle = sg; c.fill(); c.lineWidth = 3; c.strokeStyle = rgba(shade(sand, .4), .55); c.stroke();
+  c.save(); c.clip(); c.lineCap = 'round';
+  c.strokeStyle = rgba(shade(sand, -.18), .28); c.lineWidth = 2; for(let i = 0; i < 26; i++){ const x = (i * 97) % W, y = env.floor(x) + 14 + (i * 31 % 46), l = 26 + (i % 5) * 12; c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + l / 2, y - 4, x + l, y); c.stroke(); }
+  if(day > .1){ c.strokeStyle = `rgba(255,255,230,${.2 * day * lt})`; c.lineWidth = 2.4; for(let i = 0; i < 34; i++){ const x = (i * 71 + sin(t * .5 + i) * 20) % W, y = env.floor(x) + 6 + (i * 29 % 40), l = 14 + (i % 4) * 8; c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + l * .5, y - 5 * sin(t + i), x + l, y + 1); c.stroke(); } }
+  c.restore();
+  c.fillStyle = rgba(shade(sand, -.2), .4); for(let i = 0; i < 34; i++){ const x = (i * 97) % W; c.beginPath(); c.ellipse(x + 8, env.floor(x) + 18 + (i * 31 % 40), 4 + (i % 4) * 3, 1.8, 0, 0, TAU); c.fill(); }
 };
 OA.surface = function(c, W, env){
-  const amp = 3 + env.wave * 6; c.beginPath(); c.moveTo(0, 0); for(let x = 0; x <= W; x += 16) c.lineTo(x, 14 + sin(x * .02 + env.t * 1.6) * amp + sin(x * .05 + env.t * 2.4) * amp * .5); c.lineTo(W, 0); c.closePath(); const g = c.createLinearGradient(0, 0, 0, 30); g.addColorStop(0, `rgba(255,255,255,${.5 * (.4 + env.sky.day * .6)})`); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fill();
-  c.strokeStyle = `rgba(255,255,255,${.35 + .3 * env.sky.day})`; c.lineWidth = 2; c.beginPath(); for(let x = 0; x <= W; x += 16){ const y = 14 + sin(x * .02 + env.t * 1.6) * amp + sin(x * .05 + env.t * 2.4) * amp * .5; x ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke();
+  const amp = 3 + env.wave * 6, d = env.sky.day, t = env.t, y = (x, k) => 14 + k * 3 + sin(x * .02 + t * 1.6 + k) * amp + sin(x * .05 + t * 2.4 + k) * amp * .5;
+  c.beginPath(); c.moveTo(0, 0); for(let x = 0; x <= W; x += 16) c.lineTo(x, y(x, 0)); c.lineTo(W, 0); c.closePath(); const g = c.createLinearGradient(0, 0, 0, 44); g.addColorStop(0, `rgba(255,255,255,${.62 * (.4 + d * .6)})`); g.addColorStop(.5, `rgba(190,245,255,${.2 * (.4 + d * .6)})`); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fill();
+  for(let k = 1; k >= 0; k--){ c.strokeStyle = `rgba(255,255,255,${(k ? .22 : .5) + .25 * d})`; c.lineWidth = k ? 1.4 : 2.2; c.beginPath(); for(let x = 0; x <= W; x += 16){ const yy = y(x, k * 1.6); x ? c.lineTo(x, yy) : c.moveTo(x, yy); } c.stroke(); }
 };
 /* ---------- ẢNH THU NHỎ ---------- */
 let TC = {}, TCn = 0;
 OA.thumb = function(spec, w = 120, h = 84){
   const key = [spec.kind, spec.id, spec.stg, spec.sil ? 1 : 0, JSON.stringify(spec.g || ''), w, h].join('|'); if(TC[key]) return TC[key];
   const cv = document.createElement('canvas'), dpr = 2; cv.width = w * dpr; cv.height = h * dpr; const c0 = cv.getContext('2d'); c0.scale(dpr, dpr); let c = c0;
-  const gr = c.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#bff0ff'); gr.addColorStop(1, '#5fb8e8'); c.fillStyle = gr; c.fillRect(0, 0, w, h);
+  const gr = c.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#d9f7ff'); gr.addColorStop(.55, '#7fd3ee'); gr.addColorStop(1, '#3a9fd0'); c.fillStyle = gr; c.fillRect(0, 0, w, h); { const rg = c.createRadialGradient(w * .5, h * .35, 2, w * .5, h * .35, w * .6); rg.addColorStop(0, 'rgba(255,255,255,.55)'); rg.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = rg; c.fillRect(0, 0, w, h); c.fillStyle = 'rgba(255,255,255,.28)'; for(let i = 0; i < 5; i++){ c.beginPath(); c.arc((i * 37 + 11) % w, h - ((i * 23 + 9) % (h - 8)), 1.4 + i % 3 * .7, 0, 6.3); c.fill(); } }
   let tcv = null; if(spec.sil){ tcv = document.createElement('canvas'); tcv.width = cv.width; tcv.height = cv.height; c = tcv.getContext('2d'); c.scale(dpr, dpr); }
   c.save();
-  if(spec.kind === 'sp'){ const d = OD.SP[spec.id] || spec.d; const g = Object.assign(OA.G0(), spec.g || {}); const stg = spec.stg == null ? 3 : spec.stg; const f = { d, g, stg, id: 7, x: w / 2, y: h / 2 + (d.arch === 'horse' || d.arch === 'dragon' ? 0 : 3), len: 0, face: 1, pitch: 0, ph: 1.2, spd: .3, bl: 1, gill: 0, mouth: 0, al: 1, mood: 'ok', lx: .3, ly: 0 };
-    const maxL = (d.arch === 'horse' || d.arch === 'dragon' || d.arch === 'jelly' || d.arch === 'octo') ? h * .82 : w * .72; f.len = maxL * (d.arch === 'fish' ? .9 : 1) / (d.arch === 'fish' && d.H > .85 ? 1.05 : 1); OA.fish(c, f, 1.3); }
+  if(spec.kind === 'sp'){ const d = OD.SP[spec.id] || spec.d; const g = Object.assign(OA.G0(), spec.g || {}); const stg = spec.stg == null ? 3 : spec.stg; const f = { d, g, stg, id: 7, x: w / 2 + (d.arch === 'fish' ? w * .035 : 0), y: h / 2 + (d.arch === 'horse' || d.arch === 'dragon' ? 0 : 3), len: 0, face: 1, pitch: 0, ph: 1.2, spd: .3, bl: 1, gill: 0, mouth: 0, al: 1, mood: 'ok', lx: .3, ly: 0 };
+    const maxL = (d.arch === 'horse' || d.arch === 'dragon' || d.arch === 'jelly' || d.arch === 'octo') ? h * .82 : w * .6; f.len = maxL * (d.arch === 'fish' ? .9 : 1) / (d.arch === 'fish' && d.H > .85 ? 1.05 : 1); OA.fish(c, f, 1.3); }
   else if(spec.kind === 'pl'){ OA.plant(c, { d: spec.d, x: w / 2, y: h - 6, h: h * .8, w: h * .6, id: 3 }, 1, .6); }
   else if(spec.kind === 'dc'){ OA.decor(c, { d: spec.d, x: w / 2, y: h - 6, s: Math.min(.62, h / 150), id: 3 }, 1, 0); }
-  c.restore(); if(tcv){ c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-in'; c.fillStyle = 'rgba(0,0,0,.45)'; c.fillRect(0, 0, tcv.width, tcv.height); c0.drawImage(tcv, 0, 0); }
+  c.restore(); if(tcv){ c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-in'; c.fillStyle = 'rgba(0,0,0,.45)'; c.fillRect(0, 0, tcv.width, tcv.height); c0.setTransform(1, 0, 0, 1, 0, 0); c0.drawImage(tcv, 0, 0); }
   if(++TCn > 500){ TC = {}; TCn = 1; } return TC[key] = cv.toDataURL();
 };
 })();

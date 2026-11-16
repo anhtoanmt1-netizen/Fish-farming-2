@@ -10,12 +10,16 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap&subset=vietnamese" media="print" onload="this.media='all'">
 <style>
   html,body{margin:0;height:100%;background:#06182b;overflow:hidden;overscroll-behavior:none;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;font-family:'Montserrat',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
   #app{position:fixed;inset:0}
   button{font-family:inherit;border:0;cursor:pointer;-webkit-appearance:none;appearance:none}
   input,select{font-family:inherit}
-  #boot{position:fixed;inset:0;display:grid;place-items:center;color:#9fc4e8;font-weight:700;background:#06182b;z-index:1}
+  #boot{position:fixed;inset:0;display:flex;flex-direction:column;gap:18px;align-items:center;justify-content:center;color:#bfe9ff;font-weight:800;letter-spacing:.5px;background:radial-gradient(ellipse at 50% 0,#12507f,#06182b 70%);z-index:1}
+  #boot::before{content:"";width:46px;height:46px;border-radius:50%;border:4px solid rgba(255,255,255,.18);border-top-color:#5eead4;animation:bs 1s linear infinite}
+  @keyframes bs{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
