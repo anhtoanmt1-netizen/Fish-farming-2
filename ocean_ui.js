@@ -13,6 +13,7 @@ let liveN = 0;
 /* ---------- bộ biểu tượng SVG đồng bộ ---------- */
 const ICN = {
   back: '<path d="M15 5l-7 7 7 7"/>', plus: '<path d="M12 5v14M5 12h14"/>', minus: '<path d="M5 12h14"/>',
+  harv: '<circle cx="12" cy="12" r="8.5"/><path d="M7.8 13c1.4-2.8 2.8-2.8 4.2 0s2.8 2.8 4.200 0"/>',
   coin: '<circle cx="12" cy="12" r="8.5"/><path d="M7.8 13c1.4-2.8 2.8-2.8 4.2 0s2.8 2.8 4.200 0"/><path d="M8 9.600c1.300-2 2.700-2 4 0s2.700 2 4 0" opacity=".55"/>',
   feed: '<circle class="f" cx="8" cy="5.500" r="1.600"/><circle class="f" cx="13.500" cy="4" r="1.600"/><circle class="f" cx="17" cy="8" r="1.600"/><circle class="f" cx="11" cy="9.500" r="1.600"/><path d="M4 14h16l-1.800 5.200a1.500 1.500 0 01-1.400 1H7.200a1.500 1.500 0 01-1.400-1z"/>',
   fish: '<path d="M2.500 12c2.600-4.600 7.200-6 11.200-3.400L18.500 6v12l-4.800-2.600C9.700 18 5.100 16.600 2.500 12z"/><circle class="f" cx="8.200" cy="11" r="1"/>',
@@ -26,7 +27,8 @@ const ICN = {
   log: '<path d="M6 4h10a2 2 0 012 2v14H8a2 2 0 01-2-2z"/><path d="M6 18a2 2 0 002 2M10 8.500h5M10 12.500h5"/>',
   set: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>'
 };
-const I = k => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ICN[k]}</svg>`;
+const PIC = k => `<img class="pic" src="${(window.OIC || {})[k]}" alt="" draggable="false">`;
+const I = k => (window.OIC && OIC[k]) ? PIC(k) : `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ICN[k]}</svg>`;
 const COIN = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.500" fill="url(#ocGold)" stroke="#a86a00" stroke-width="1.200"/><circle cx="12" cy="12" r="7.600" fill="none" stroke="#b9780a" stroke-width="1" opacity=".7"/><path d="M7.800 13c1.400-2.800 2.800-2.800 4.200 0s2.800 2.800 4.200 0" fill="none" stroke="#8a5300" stroke-width="1.600" stroke-linecap="round"/><path d="M7.500 8.500a5.500 5.500 0 013-2.200" fill="none" stroke="#fff" stroke-width="1.300" stroke-linecap="round" opacity=".8"/></svg>';
 let shT = 0, fxNext = false, lastBurst = 0;
 const fishF = { stg: -1, rar: -1, fav: false, mut: false, ready: false, coin: false, q: '', sort: 'new', col: '' };
@@ -169,6 +171,19 @@ html.ls .ocTop{padding-right:80px}
 html.ls .ocGrid{grid-template-columns:repeat(3,1fr)}
 @media (max-width:370px){.ocTools .ocB{width:30px;height:32px;font-size:15px}.ocCoin{font-size:13px;padding-right:9px}.ocNav button span.nl{font-size:8.5px}.ocGrid{gap:6px}}
 @media (min-width:700px){.ocGrid{grid-template-columns:repeat(4,1fr)}.ocSh{border-radius:28px}.ocSheet{align-items:center}.ocSh{height:84%;border-bottom:1px solid var(--line)}.ocSheet{padding-bottom:calc(76px + env(safe-area-inset-bottom))}}
+/* ---- icon hình ảnh ---- */
+.oc img.pic{width:1em;height:1em;object-fit:contain;display:block;pointer-events:none;filter:drop-shadow(0 2px 3px rgba(0,16,40,.45))}
+.ocNav button .ni img.pic{font-size:32px}
+.ocNav button .ni{width:36px;height:32px;margin-top:-2px}
+.ocNav button.on .ni{background:none;box-shadow:none;transform:translateY(-3px) scale(1.12)}
+.ocNav button.on .ni img.pic{filter:drop-shadow(0 0 7px rgba(94,234,212,.95)) drop-shadow(0 2px 3px rgba(0,16,40,.5))}
+.ocNav button{height:58px}
+.ocTools .ocB{font-size:28px}
+.ocB.big{font-size:40px}
+#ocFeedB,.ocB.gold{background:var(--glass);border-color:rgba(255,216,107,.7)}
+#ocFeedB.on{background:linear-gradient(145deg,rgba(94,234,212,.5),rgba(26,166,184,.35));border-color:#5eead4}
+.ocSh .ocShH b img.pic{font-size:26px}
+html.ls .ocNav button .ni{width:30px;height:26px;margin:0}html.ls .ocNav button .ni img.pic{font-size:26px}html.ls .ocNav button{gap:1px}
 @media (prefers-reduced-motion:reduce){.oc *{animation-duration:.01s!important;animation-iteration-count:1!important;transition-duration:.01s!important}}
 html.oc-standalone .ocTop [data-act=exit]{display:none}
 `;
@@ -180,7 +195,7 @@ function build(){
   root.innerHTML = `<canvas id="ocC"></canvas><svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="ocGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff2a8"/><stop offset=".55" stop-color="#ffc83d"/><stop offset="1" stop-color="#d98a0b"/></linearGradient></defs></svg>
   <div class="ocTop"><button class="ocB" data-act="exit" aria-label="Thoát">${I('back')}</button><button class="ocCoin" data-act="wallet" aria-label="Ví xu">${COIN}<b id="ocCoins">0</b></button><div class="ocLv"><div class="ocLvB"><b id="ocLvN">1</b></div><div class="ocLvT">Cấp độ<i><b id="ocXp"></b></i></div></div>
     <div class="ocTools"><button class="ocB" id="ocWx" data-act="wx" aria-label="Thời tiết">☀️</button><button class="ocB" data-act="photo" aria-label="Chụp ảnh">${I('photo')}</button><button class="ocB" data-act="log" aria-label="Nhật ký">${I('log')}</button><button class="ocB" data-act="set" aria-label="Cài đặt">${I('set')}</button></div></div>
-  <div class="ocSide"><button class="ocB big" id="ocFeedB" data-act="feed" aria-label="Cho ăn">${I('feed')}</button><button class="ocB big gold" data-act="harv" aria-label="Thu tất cả xu">${I('coin')}</button><div class="ocZoom"><button class="ocB" data-act="zin" aria-label="Phóng to">${I('plus')}</button><button class="ocB" data-act="zout" aria-label="Thu nhỏ">${I('minus')}</button></div></div>
+  <div class="ocSide"><button class="ocB big" id="ocFeedB" data-act="feed" aria-label="Cho ăn">${I('feed')}</button><button class="ocB big gold" data-act="harv" aria-label="Thu tất cả xu">${I('harv')}</button><div class="ocZoom"><button class="ocB" data-act="zin" aria-label="Phóng to">${I('plus')}</button><button class="ocB" data-act="zout" aria-label="Thu nhỏ">${I('minus')}</button></div></div>
   <div class="ocHud" id="ocHud" hidden></div><div class="ocInfo" id="ocInfo" hidden></div>
   <div class="ocNav" id="ocNav">${[['fish', 'Cá'], ['shop', 'Cửa hàng'], ['coll', 'Sưu tập'], ['breed', 'Lai tạo'], ['pot', 'Thuốc'], ['deco', 'Trang trí'], ['quest', 'Nhiệm vụ']].map(([k, n]) => `<button data-act="nav" data-k="${k}" id="nav_${k}" aria-label="${n}"><span class="ni">${I(k)}</span><span class="nl">${n}</span></button>`).join('')}</div>
   <div class="ocSheet" id="ocSheet" hidden></div><div class="ocDlg" id="ocDlg" hidden></div><div class="ocToast" id="ocToast"></div>`;
