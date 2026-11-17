@@ -354,7 +354,7 @@ function step(dt){
 /* ---------- vẽ ---------- */
 function clampAll(){ for(const f of OC.fish){ f.x = cl(f.x, 30, WW - 30); f.y = cl(f.y, 42, floorY(f.x) - 10); f.tx = cl(f.tx, 30, WW - 30); f.ty = cl(f.ty, 42, floorY(f.tx) - 10); } for(const e of OC.eggs){ e.x = cl(e.x, 30, WW - 30); e.y = floorY(e.x) - 10; } for(const i of OC.items){ i.x = cl(i.x, 30, WW - 30); i.y = cl(i.y, 60, floorY(i.x) - 20); } for(const fd of OC.food){ fd.x = cl(fd.x, 20, WW - 20); } }
 function resize(){ const r = canvas.getBoundingClientRect(); vw = Math.max(100, r.width); vh = Math.max(100, r.height);
-  const s0 = Math.min(vh / 560, vw / 440), nw = cl(vw / s0, 440, 1500), nh = cl(vh / s0, 560, 1500); if(Math.abs(nw - WW) > 2 || Math.abs(nh - WH) > 2){ WW = nw; WH = nh; OC.WW = WW; OC.WH = WH; clampAll(); } const q = S.set.q, d = Math.min(q === 'low' ? 1 : q === 'high' ? 2 : (OC.fish.length > 70 ? 1.25 : 1.75), window.devicePixelRatio || 1); dpr = d; canvas.width = Math.round(vw * dpr); canvas.height = Math.round(vh * dpr); clampCam(); }
+  const s0 = Math.min(vh / 560, vw / 440), nw = cl(vw / s0, 440, 1500), nh = cl(vh / s0, 560, 1500); if(Math.abs(nw - WW) > 2 || Math.abs(nh - WH) > 2){ WW = nw; WH = nh; OC.WW = WW; OC.WH = WH; clampAll(); } const q = S.set.q, d = Math.min(q === 'low' ? 1 : q === 'high' ? 2 : (OC.fish.length > 70 ? 1.25 : 1.5), window.devicePixelRatio || 1); dpr = d; canvas.width = Math.round(vw * dpr); canvas.height = Math.round(vh * dpr); clampCam(); }
 OC.resize = resize;
 const baseScale = () => Math.max(vh / WH, vw / WW), scale = () => baseScale() * OC.cam.z;
 function clampCam(){ OC.cam.z = cl(OC.cam.z, 1, 2.6); const sc = scale(); OC.cam.x = cl(OC.cam.x, 0, Math.max(0, WW - vw / sc)); OC.cam.y = cl(OC.cam.y, 0, Math.max(0, WH - vh / sc)); }
@@ -364,10 +364,10 @@ const toWorld = (sx, sy) => ({ x: sx / scale() + OC.cam.x, y: sy / scale() + OC.
 const AURA_C = ['', '', '', '255,154,209', '255,211,77', '255,106,61'];
 let auraN = 0, vigC = null, vigW = 0, vigH = 0;
 function lowFx(){ return S.set.q === 'low' || OC.fpsT === 'low'; }
-function aura(c, f, t){ if(auraN++ > 24) return; const col = AURA_C[f.d.tier] || '150,215,255', r = f.len * (.64 + .06 * Math.sin(t * 2 + f.id)), a = .2 + .09 * Math.sin(t * 2.2 + f.id), g = c.createRadialGradient(f.x, f.y, r * .1, f.x, f.y, r); g.addColorStop(0, `rgba(${col},${a})`); g.addColorStop(.6, `rgba(${col},${a * .35})`); g.addColorStop(1, `rgba(${col},0)`); c.fillStyle = g; c.beginPath(); c.arc(f.x, f.y, r, 0, TAU); c.fill(); }
+function aura(c, f, t){ if(auraN++ > 12) return; const col = AURA_C[f.d.tier] || '150,215,255', r = f.len * (.64 + .06 * Math.sin(t * 2 + f.id)), a = .2 + .09 * Math.sin(t * 2.2 + f.id), g = c.createRadialGradient(f.x, f.y, r * .1, f.x, f.y, r); g.addColorStop(0, `rgba(${col},${a})`); g.addColorStop(.6, `rgba(${col},${a * .35})`); g.addColorStop(1, `rgba(${col},0)`); c.fillStyle = g; c.beginPath(); c.arc(f.x, f.y, r, 0, TAU); c.fill(); }
 function ambient(c, t, night){
   /* dòng bong bóng từ đáy cát */
-  if(!lowFx()){ c.lineWidth = 1; for(let i = 0; i < 5; i++){ const bx = WW * (.1 + i * .2) + (i % 2 ? 18 : -14), by = floorY(bx) - 4, span = WH * (.5 + (i % 3) * .1);
+  if(!lowFx()){ c.lineWidth = 1; for(let i = 0; i < 4; i++){ const bx = WW * (.12 + i * .25) + (i % 2 ? 18 : -14), by = floorY(bx) - 4, span = WH * (.5 + (i % 3) * .1);
       for(let k = 0; k < 6; k++){ const u = ((t * (.07 + i * .006) + k / 6 + i * .17) % 1), y = by - u * span, x = bx + Math.sin(t * 1.6 + k * 2 + i) * (4 + u * 10), r = 1.2 + u * 2.6 + (k % 2) * .6, a = Math.sin(u * Math.PI) * .6; if(a < .03) continue; c.globalAlpha = a; c.strokeStyle = 'rgba(255,255,255,.9)'; c.fillStyle = 'rgba(210,245,255,.2)'; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); c.stroke(); c.fillStyle = 'rgba(255,255,255,.85)'; c.beginPath(); c.arc(x - r * .35, y - r * .35, r * .22, 0, TAU); c.fill(); } } c.globalAlpha = 1; }
   /* hạt sáng / phù du: ban đêm chuyển sang phát quang xanh–tím */
   const col = night > .35 ? '#8ff7ff' : '#f2fdff'; c.fillStyle = col; let i = 0;
@@ -380,7 +380,7 @@ function vignette(c){
   c.drawImage(vigC, 0, 0, vw, vh);
 }
 let bgC = null, bgT = -9;
-function drawBg(c, env){ const rf = cl(scale() * dpr, .5, 1.4), w = Math.ceil(WW * rf), h = Math.ceil((WH + 40) * rf); if(!bgC || bgC.width !== w || bgC.height !== h){ bgC = document.createElement('canvas'); bgC.width = w; bgC.height = h; bgT = -9; } if(OC.t - bgT > .35){ bgT = OC.t; const b = bgC.getContext('2d'); b.setTransform(rf, 0, 0, rf, 0, 0); OA.bg(b, WW, WH + 40, env); } c.drawImage(bgC, 0, 0, WW, WH + 40); }
+function drawBg(c, env){ const rf = cl(scale() * dpr * .75, .5, 1), w = Math.ceil(WW * rf), h = Math.ceil((WH + 40) * rf); if(!bgC || bgC.width !== w || bgC.height !== h){ bgC = document.createElement('canvas'); bgC.width = w; bgC.height = h; bgT = -9; } if(OC.t - bgT > .7){ bgT = OC.t; const b = bgC.getContext('2d'); b.setTransform(rf, 0, 0, rf, 0, 0); OA.bg(b, WW, WH + 40, env); } c.drawImage(bgC, 0, 0, WW, WH + 40); }
 function draw(){
   const c = ctx, t = OC.t, sk = sky(), env = { sky: sk, t, floor: floorY, light: 1 - (['storm', 'heavy'].includes(OC.wx.k) ? .7 : OC.wx.k === 'cloud' ? .4 : OC.wx.k === 'rain' ? .5 : 0), wave: ['storm'].includes(OC.wx.k) ? 2 : OC.wx.k === 'wind' ? 1.4 : OC.wx.k === 'heavy' ? 1.2 : .4 };
   c.setTransform(dpr, 0, 0, dpr, 0, 0); const sc = scale(); c.save(); c.scale(sc, sc); c.translate(-OC.cam.x, -OC.cam.y);
@@ -422,9 +422,13 @@ function draw(){
 }
 /* ---------- vòng lặp ---------- */
 function loop(ts){
-  if(!running){ raf = 0; return; } const dt = Math.min(.06, (ts - lastTs) / 1000); lastTs = ts; OC.fpsAvg += ((dt * 1000) - OC.fpsAvg) * .03;
+  if(!running){ raf = 0; return; }
+  /* giới hạn khung hình để máy bớt nóng: cân bằng 30, tiết kiệm 20, mượt 60; mở bảng chức năng thì 15 (hồ bị che) */
+  const pw = S.set.pw, tgt = OC.hiFps ? 60 : OC.slow ? 15 : pw === 'smooth' ? 60 : pw === 'sav' ? 20 : 30, minF = 1000 / tgt, el = ts - lastTs;
+  if(el < minF - 3){ raf = requestAnimationFrame(loop); return; }
+  const dt = Math.min(.1, el / 1000); lastTs = ts; OC.fpsAvg += ((el > minF * 1.35 ? el : 16) - OC.fpsAvg) * .03;
   if(S.set.q === 'auto' && OC.fpsAvg > 30 && OC.fpsT !== 'low' && OC.frame % 60 === 0){ OC.fpsT = 'low'; S.set.parts = .5; dpr = 1; canvas.width = Math.round(vw); canvas.height = Math.round(vh); }
-  step(dt); draw(); raf = requestAnimationFrame(loop);
+  if(dt > .05){ step(dt / 2); step(dt / 2); } else step(dt); draw(); raf = requestAnimationFrame(loop);
 }
 OC.start = function(){ if(running) return; running = true; if(OC.stoppedAt){ const rep = applyOffline((now() - OC.stoppedAt) / 1000); OC.stoppedAt = 0; if(rep) OC.offline = rep; } lastTs = performance.now(); OC.running = true; resize(); raf = requestAnimationFrame(loop); audioApply(); };
 OC.stop = function(){ running = false; OC.running = false; OC.stoppedAt = now(); save(); audioApply(); };

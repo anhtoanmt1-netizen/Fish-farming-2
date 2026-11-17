@@ -23,3 +23,10 @@ Chỉ thay đổi lớp giao diện/hình ảnh. Không đổi dữ liệu, côn
 - `sw.js`: tăng `CACHE` lên `ocean-life-v2` để PWA nhận giao diện mới.
 - `index.html`: màn hình khởi động mới; phông Nunito (hỗ trợ tiếng Việt) tải không chặn, ngoại tuyến tự dùng phông hệ thống.
 - `ocean.js`: thêm một dòng gọi `OC.fx` trong `sfx()` để phát hiệu ứng thị giác (không ảnh hưởng logic).
+
+## Giảm nóng máy (v2.1)
+- Giới hạn khung hình: mặc định 30 khung/giây (trước đây không giới hạn, thường 60), 15 khi đang mở bảng chức năng (hồ bị che), 60 khi chụp ảnh. Mô phỏng vẫn chạy đủ tốc độ (tiến trình, thu nhập, sinh sản không đổi).
+- Cài đặt → Đồ họa → "Khung hình": Tiết kiệm (20) / Cân bằng (30) / Mượt (60).
+- Nền hồ vẽ ở độ phân giải thấp hơn và làm mới thưa hơn; độ phân giải canvas tự động tối đa 1,5×.
+- Bỏ làm mờ kính (backdrop-filter) trên các thành phần luôn hiện — rất tốn GPU khi nằm trên canvas chuyển động; bỏ hiệu ứng đập sáng lặp vô hạn trên nút.
+- Giảm số quầng sáng cá hiếm và dòng bong bóng.
