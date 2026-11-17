@@ -32,4 +32,4 @@ Chỉ thay đổi lớp giao diện/hình ảnh. Không đổi dữ liệu, côn
 - Giảm số quầng sáng cá hiếm và dòng bong bóng.
 
 ## Bộ icon hình ảnh (v2.2)
-12 icon tách nền từ ảnh được cung cấp, nhúng sẵn trong `ocean_icons.js` (WebP 128px, dùng ngoại tuyến): Cá đang sở hữu, Cửa hàng, Bộ sưu tập, Lai tạo, Thuốc, Trang trí, Nhiệm vụ (thanh điều hướng), Thu xu (rương vàng), Thức ăn, Cài đặt, Nhật ký, Chụp ảnh. Nếu tệp icon không tải được, game tự dùng icon SVG cũ. `sw.js` (cache v4) và `build-apk.yml` đã thêm tệp mới.
+12 icon tách nền từ ảnh được cung cấp, nhúng sẵn ngay đầu `ocean_ui.js` (WebP 128px, dùng ngoại tuyến): Cá đang sở hữu, Cửa hàng, Bộ sưu tập, Lai tạo, Thuốc, Trang trí, Nhiệm vụ (thanh điều hướng), Thu xu (rương vàng), Thức ăn, Cài đặt, Nhật ký, Chụp ảnh. Nếu tệp icon không tải được, game tự dùng icon SVG cũ. Không cần thêm tệp mới nên workflow build APK cũ vẫn dùng được; `sw.js` cache v5.

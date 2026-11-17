@@ -36,7 +36,7 @@ jobs:
       - name: Gom tệp web vào thư mục www
         run: |
           rm -rf www && mkdir -p www
-          cp index.html main.js manifest.json sw.js ocean_data.js ocean_art.js ocean.js ocean_ui.js ocean_icons.js icon-192.png icon-512.png icon-maskable-512.png www/
+          cp index.html main.js manifest.json sw.js ocean_data.js ocean_art.js ocean.js ocean_ui.js icon-192.png icon-512.png icon-maskable-512.png www/
           ls -la www
 
       - name: Tạo dự án Android
