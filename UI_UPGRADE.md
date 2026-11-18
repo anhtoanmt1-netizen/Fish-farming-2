@@ -33,3 +33,6 @@ Chỉ thay đổi lớp giao diện/hình ảnh. Không đổi dữ liệu, côn
 
 ## Bộ icon hình ảnh (v2.2)
 12 icon tách nền từ ảnh được cung cấp, nhúng sẵn ngay đầu `ocean_ui.js` (WebP 128px, dùng ngoại tuyến): Cá đang sở hữu, Cửa hàng, Bộ sưu tập, Lai tạo, Thuốc, Trang trí, Nhiệm vụ (thanh điều hướng), Thu xu (rương vàng), Thức ăn, Cài đặt, Nhật ký, Chụp ảnh. Nếu tệp icon không tải được, game tự dùng icon SVG cũ. Không cần thêm tệp mới nên workflow build APK cũ vẫn dùng được; `sw.js` cache v5.
+
+## Icon thức ăn (v2.4)
+9 icon thức ăn (cơ bản, tăng trưởng, màu sắc, hạnh phúc, cá con, sinh sản, quý hiếm, phát sáng, huyền thoại) nhúng trong `ocean_ui.js` (khóa `food_<id>`), dùng ở Cửa hàng → Thức ăn và thanh chọn thức ăn khi cho ăn. `sw.js` cache v6.
