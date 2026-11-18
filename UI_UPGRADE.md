@@ -36,3 +36,6 @@ Chỉ thay đổi lớp giao diện/hình ảnh. Không đổi dữ liệu, côn
 
 ## Icon thức ăn (v2.4)
 9 icon thức ăn (cơ bản, tăng trưởng, màu sắc, hạnh phúc, cá con, sinh sản, quý hiếm, phát sáng, huyền thoại) nhúng trong `ocean_ui.js` (khóa `food_<id>`), dùng ở Cửa hàng → Thức ăn và thanh chọn thức ăn khi cho ăn. `sw.js` cache v6.
+
+## Icon thuốc (v2.5)
+23 icon thuốc (`pot_<mã>` trong `ocean_ui.js`) dùng ở Cửa hàng → Thuốc, Kho thuốc và hộp chọn thuốc cho cá. Thuốc đột biến hình thái (m3) lấy từ bộ ảnh thứ hai; còn lại từ bộ ảnh thứ nhất. `sw.js` cache v7.
