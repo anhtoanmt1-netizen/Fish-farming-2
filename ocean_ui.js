@@ -45,6 +45,7 @@ const ICN = {
   set: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>'
 };
 const PIC = k => `<img class="pic" src="${(window.OIC || {})[k]}" alt="" draggable="false">`;
+const HOLD_HINT = '<p style="margin:0 2px 9px;font-size:11px;color:var(--mut)">Mẹo: giữ nút giá để mua liên tục.</p>';
 const potIcon = p => (window.OIC && OIC['pot_' + p.id]) ? `<img class="pic pi" src="${OIC['pot_' + p.id]}" alt="" draggable="false">` : bottle(p.cat);
 const FIC = id => (window.OIC && OIC['food_' + id]) ? `<img class="pic fi" src="${OIC['food_' + id]}" alt="" draggable="false">` : '🍤';
 const I = k => (window.OIC && OIC[k]) ? PIC(k) : `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ICN[k]}</svg>`;
@@ -205,7 +206,8 @@ html.ls .ocGrid{grid-template-columns:repeat(3,1fr)}
 html.ls .ocNav button .ni{width:30px;height:26px;margin:0}html.ls .ocNav button .ni img.pic{font-size:26px}html.ls .ocNav button{gap:1px}
 .ocFd{display:inline-flex;align-items:center;gap:5px;padding:4px 11px 4px 5px}.ocFd img.fi{width:30px;height:30px;font-size:30px}
 .ocFi{flex:none;width:58px;height:58px;display:grid;place-items:center;font-size:30px;text-align:center}.ocFi img.fi{width:58px;height:58px;font-size:58px}
-.ocRow img.pic.pi{width:60px;height:60px;font-size:60px;border-radius:0;background:none;box-shadow:none}
+.ocRow img.pic{width:60px;height:60px;font-size:60px;border-radius:0;background:none;box-shadow:none}
+.ocTop{z-index:3}html.ls .ocTop{z-index:auto}
 @media (prefers-reduced-motion:reduce){.oc *{animation-duration:.01s!important;animation-iteration-count:1!important;transition-duration:.01s!important}}
 html.oc-standalone .ocTop [data-act=exit]{display:none}
 `;
@@ -222,12 +224,40 @@ function build(){
   <div class="ocNav" id="ocNav">${[['fish', 'Cá'], ['shop', 'Cửa hàng'], ['coll', 'Sưu tập'], ['breed', 'Lai tạo'], ['pot', 'Thuốc'], ['deco', 'Trang trí'], ['quest', 'Nhiệm vụ']].map(([k, n]) => `<button data-act="nav" data-k="${k}" id="nav_${k}" aria-label="${n}"><span class="ni">${I(k)}</span><span class="nl">${n}</span></button>`).join('')}</div>
   <div class="ocSheet" id="ocSheet" hidden></div><div class="ocDlg" id="ocDlg" hidden></div><div class="ocToast" id="ocToast"></div>`;
   root.addEventListener('pointerdown', ripple, { passive: true });
+  setupHoldAndCoin();
   root.addEventListener('click', e => { if(e.target.id === 'ocSheet'){ closeSheet(); return; } const el = e.target.closest('[data-act]'); if(!el) return; if(/Tab$|^ff$|^ft$|^shopSel$|^shopBack$|^potCat$/.test(el.dataset.act)) fxNext = true; if(el.classList.contains('dis')){ toast(el.dataset.why || 'Không khả dụng lúc này', 'warn'); return; } const f = ACT[el.dataset.act]; if(f){ OC.audioUnlock(); f(el.dataset, el, e); } });
   root.addEventListener('input', e => { const el = e.target.closest('[data-in]'); if(el && IN[el.dataset.in]) IN[el.dataset.in](el.value, el); });
   root.addEventListener('change', e => { const el = e.target.closest('[data-ch]'); if(el && IN[el.dataset.ch]) IN[el.dataset.ch](el.value, el); });
   OC.init($('#ocC')); OC.fx = fxEvent; OC.ui = { refresh, toast, select, back, offlineReport }; new ResizeObserver(() => { if(!root.hidden) OC.resize(); }).observe(root); refresh('all');
 }
 
+
+/* ---------- giữ nút mua để mua liên tục; chạm 5 lần vào ô xu để chỉnh số xu ---------- */
+const hold = { t: 0, fired: false, x: 0, y: 0, rel: 0 };
+function holdStop(){ clearTimeout(hold.t); hold.t = 0; if(hold.fired){ clearTimeout(hold.rel); hold.rel = setTimeout(() => { hold.fired = false; }, 400); } }
+function setupHoldAndCoin(){
+  let taps = 0, ct = 0;
+  root.addEventListener('pointerdown', e => {
+    const el = e.target.closest('[data-act]'); if(!el || !/^(buyFood|buyPot)$/.test(el.dataset.act) || el.classList.contains('dis')) return;
+    const act = el.dataset.act, id = el.dataset.id; hold.x = e.clientX; hold.y = e.clientY; clearTimeout(hold.t); hold.fired = false; let n = 0;
+    const tick = () => { const b = root.querySelector(`[data-act="${act}"][data-id="${id}"]`); if(!b || b.classList.contains('dis')){ holdStop(); return; } const before = S().coins; OC.audioUnlock(); OC.busy = false; ACT[act]({ ...b.dataset }, b); hold.fired = true; if(S().coins >= before){ holdStop(); return; } n++; hold.t = setTimeout(tick, Math.max(90, 220 - n * 12)); };
+    hold.t = setTimeout(tick, 420);
+  });
+  root.addEventListener('pointermove', e => { if(hold.t && Math.hypot(e.clientX - hold.x, e.clientY - hold.y) > 12) holdStop(); }, { passive: true });
+  ['pointerup', 'pointercancel'].forEach(t => window.addEventListener(t, holdStop));
+  root.addEventListener('contextmenu', e => { if(e.target.closest('[data-act^=buy]')) e.preventDefault(); });
+  root.addEventListener('click', e => {
+    if(hold.fired){ e.stopPropagation(); e.preventDefault(); return; }
+    if(!e.target.closest('.ocCoin')) return; e.stopPropagation(); taps++; clearTimeout(ct);
+    if(taps >= 5){ taps = 0; coinEditor(); return; }
+    ct = setTimeout(() => { const k = taps; taps = 0; if(k) ACT.wallet(); }, 380);
+  }, true);
+}
+function coinEditor(){
+  const s = S(); dlg(`<h3>Chỉnh số xu</h3><p>Nhập số xu mong muốn (0 – 1.000.000.000.000). Hiện có: <b>${fmtN(s.coins)}</b></p><input type="text" inputmode="numeric" id="ocCoinIn" value="${Math.floor(s.coins)}" autocomplete="off"><div class="ocFil" style="margin:10px 0 0">${[1000, 10000, 100000, 1000000].map(v => `<button class="ocTab" data-act="coinPre" data-v="${v}">${fmtN(v)}</button>`).join('')}</div>`,
+    [{ t: 'Hủy', k: closeDlg }, { t: 'Lưu', c: 'pri', k: () => { const raw = ($('#ocCoinIn').value || '').replace(/[^\d]/g, ''); if(!raw){ toast('Hãy nhập một số', 'warn'); return; } const v = Math.min(1e12, parseInt(raw, 10)); S().coins = v; OC.queueSave(); refresh('all'); closeDlg(); toast('Đã đặt số xu: ' + fmtN(v), 'ok'); } }]);
+  setTimeout(() => { const i = $('#ocCoinIn'); if(i){ i.focus(); i.select(); } }, 60);
+}
 /* ---------- hoạt ảnh tương tác ---------- */
 function ripple(e){ const b = e.target.closest && e.target.closest('button'); if(!b) return; const r = b.getBoundingClientRect(), d = Math.max(r.width, r.height) * 1.7, sp = document.createElement('span'); sp.className = 'ocRip'; sp.style.cssText = `width:${d}px;height:${d}px;left:${e.clientX - r.left - d / 2}px;top:${e.clientY - r.top - d / 2}px`; b.appendChild(sp); setTimeout(() => sp.remove(), 600); }
 function burst(n, small){ if(!root || root.hidden) return; const t = now(); if(t - lastBurst < 250) return; lastBurst = t; n = Math.max(4, Math.round(n * ((S() && S().set.parts) || 1))); const L = document.createElement('div'); L.className = 'ocFxL' + (small ? ' sm' : ''); const cols = ['#ffd86b', '#5eead4', '#ff8fa3', '#b79cff', '#ffffff']; for(let i = 0; i < n; i++){ const a = Math.random() * 6.283, r = (small ? 50 : 80) + Math.random() * (small ? 70 : 150), q = document.createElement('i'); q.style.cssText = `--c:${cols[i % 5]};--x:${Math.cos(a) * r}px;--y:${Math.sin(a) * r - 30}px;--s:${4 + Math.random() * 7}px;--d:${.7 + Math.random() * .6}s`; L.appendChild(q); } root.appendChild(L); setTimeout(() => L.remove(), 1500); }
@@ -316,8 +346,8 @@ function shopRender(b){
     const cv = b.querySelector('#ocPv'); startPv(cv, d, { stg: PV.stg, zoom: PV.zoom }); return; }
   let body = '';
   if(shopTab === 'fish' || shopTab === 'egg'){ body = `<div class="ocGrid">${OD.SPECIES.filter(d => d.buy).map(d => { const ok = s.lvl >= d.lvl; return `<button class="ocCard ${ok ? '' : 'lock'}" data-act="shopSel" data-id="${d.id}" data-t="${d.tier}" style="--rc:${tier(d).c}"><img src="${thumbSp(d, shopTab === 'egg' ? 0 : 1, !ok)}" alt="" loading="lazy"><span>${esc(d.n)}</span><small>${ok ? '' : '🔒 Cấp ' + d.lvl}</small><span class="pr">${fmtN(shopTab === 'egg' ? Math.round(d.val * OD.ECON.eggMul) : d.price)}¢</span></button>`; }).join('')}</div><p style="font-size:11px;color:#9fc4e8">Loài huyền thoại và đột biến chỉ có thể khám phá qua lai tạo, đột biến hoặc sự kiện.</p>`; }
-  else if(shopTab === 'pot'){ body = OD.POTIONS.map(p => `<div class="ocRow"><div style="flex:none">${potIcon(p)}</div><div><b>${p.n}</b><small>${p.cat} · có ${s.inv.potion[p.id] || 0}</small><br>${p.d}</div><button class="ocBtn pri" data-act="buyPot" data-id="${p.id}">${fmtN(p.price)}¢</button></div>`).join(''); }
-  else if(shopTab === 'food'){ body = OD.FOODS.map(f => `<div class="ocRow"><div class="ocFi">${FIC(f.id)}</div><div><b>${f.n}</b><small>×${f.pack} hạt · có ${s.inv.food[f.id] || 0}</small><br>${f.d}</div><button class="ocBtn pri" data-act="buyFood" data-id="${f.id}">${fmtN(f.price)}¢</button></div>`).join(''); }
+  else if(shopTab === 'pot'){ body = HOLD_HINT + OD.POTIONS.map(p => `<div class="ocRow"><div style="flex:none">${potIcon(p)}</div><div><b>${p.n}</b><small>${p.cat} · có ${s.inv.potion[p.id] || 0}</small><br>${p.d}</div><button class="ocBtn pri" data-act="buyPot" data-id="${p.id}">${fmtN(p.price)}¢</button></div>`).join(''); }
+  else if(shopTab === 'food'){ body = HOLD_HINT + OD.FOODS.map(f => `<div class="ocRow"><div style="flex:none">${FIC(f.id)}</div><div><b>${f.n}</b><small>×${f.pack} hạt · có ${s.inv.food[f.id] || 0}</small><br>${f.d}</div><button class="ocBtn pri" data-act="buyFood" data-id="${f.id}">${fmtN(f.price)}¢</button></div>`).join(''); }
   else if(shopTab === 'pl'){ body = OD.PLANTS.map(p => `<div class="ocRow"><img src="${OA.thumb({ kind: 'pl', id: p.id, d: p }, 120, 84)}" alt="" loading="lazy"><div><b>${p.n}</b><small>${p.shelter ? 'Nơi trú ẩn · ' : ''}${p.glow ? 'Phát sáng · ' : ''}có ${s.own.pl[p.id] || 0}</small></div><button class="ocBtn pri" data-act="buyDeco" data-k="pl" data-id="${p.id}">${fmtN(p.price)}¢</button></div>`).join(''); }
   else if(shopTab === 'dc'){ body = [1, 2, 3, 4].map(g => `<div class="ocSec">${['Địa hình & nơi trú ẩn', 'San hô & thực vật trang trí', 'Vật trang trí nhân tạo', 'Trang trí cao cấp'][g - 1]}</div>` + OD.DECOR.filter(d => d.grp === g).map(d => `<div class="ocRow"><img src="${OA.thumb({ kind: 'dc', id: d.id, d }, 120, 84)}" alt="" loading="lazy"><div><b>${d.n}</b><small>${d.glow ? 'Phát sáng · ' : ''}${d.cave ? 'Hang trú ẩn · ' : ''}có ${s.own.dc[d.id] || 0}</small></div><button class="ocBtn pri" data-act="buyDeco" data-k="dc" data-id="${d.id}">${fmtN(d.price)}¢</button></div>`).join('')).join(''); }
   else if(shopTab === 'sp'){ const up = OD.ECON.capUpgrades.find(u => u[0] > s.cap); body = `<div class="ocRow"><div style="font-size:30px;flex:none;width:44px;text-align:center">🌊</div><div><b>Mở rộng hồ</b><small>Sức chứa hiện tại: ${s.cap}</small><br>${up ? 'Nâng lên ' + up[0] + ' sinh vật' : 'Đã đạt tối đa'}</div>${up ? `<button class="ocBtn pri" data-act="buyCap">${fmtN(up[1])}¢</button>` : ''}</div>
@@ -412,6 +442,7 @@ const ACT = {
   wallet: panelWallet, log: panelLog, set: panelSet, photo(){ closeSheet(); photoMode(true); }, photoOff(){ photoMode(false); }, shot,
   wx(){ const night = OA.skyColors(S().time).day < .35; toast((OD.WEATHER[OC.wx.k]) + ' · ' + (night ? 'Ban đêm' : 'Ban ngày') + ' · còn ' + mmss(OC.wx.left * 1000), 'info'); },
   feed(){ OC.setMode(OC.mode === 'feed' ? 'view' : 'feed'); }, harv(){ OC.harvestAll(); }, zin(){ OC.zoom(1.25); }, zout(){ OC.zoom(.8); }, mode(d){ OC.setMode(d.m); }, foodSel(d){ S().feedType = d.id; hud(); },
+  coinPre(d){ const i = $('#ocCoinIn'); if(i) i.value = d.v; },
   dlgBtn(d){ const b = $('#ocDlg')._b[+d.i]; if(b.k) b.k(); else closeDlg(); }, dlgFish(d){ const f = OC.fish.find(x => x.id === +d.id), cb = $('#ocDlg')._pf; closeDlg(); if(f && cb) cb(f); },
   infoToggle(){ infoOpen = !infoOpen; renderInfo(); }, iClose(){ OC.sel = null; $('#ocInfo').hidden = true; },
   iFeed(){ OC.feedFish(OC.sel); }, iHarv(){ OC.harvest(OC.sel); renderInfo(); }, iPot(){ usePotFlowPick(OC.sel); }, iBreed(){ closeDlg(); panelBreed(OC.sel); },

@@ -39,3 +39,9 @@ Chỉ thay đổi lớp giao diện/hình ảnh. Không đổi dữ liệu, côn
 
 ## Icon thuốc (v2.5)
 23 icon thuốc (`pot_<mã>` trong `ocean_ui.js`) dùng ở Cửa hàng → Thuốc, Kho thuốc và hộp chọn thuốc cho cá. Thuốc đột biến hình thái (m3) lấy từ bộ ảnh thứ hai; còn lại từ bộ ảnh thứ nhất. `sw.js` cache v7.
+
+## v2.6
+- Cửa hàng → Thức ăn: cùng bố cục với bảng thuốc (icon tách nền, canh lề giống nhau).
+- Giữ nút giá (Thức ăn, Thuốc) để mua liên tục, nhanh dần, tự dừng khi hết xu hoặc khi nhả tay/kéo cuộn. Chạm đơn vẫn mua 1 lần như cũ.
+- Chạm nhanh 5 lần vào ô xu (góc trên bên trái) để mở bảng nhập số xu tùy ý (0 đến 1.000.000.000.000, có nút điền nhanh). Chạm 1 lần vẫn mở Ví (sau khoảng 0,4 giây). Hoạt động cả khi đang mở cửa hàng ở chế độ dọc.
+- `sw.js` cache v8.
