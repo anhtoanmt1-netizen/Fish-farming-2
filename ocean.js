@@ -28,7 +28,7 @@ function seedTanks(){ for(let i = 1; i < 4; i++) if(!TK.placed[i].length) withTa
 function initTanks(placed0){ S.tanks = TANK_DEF.map(d => Object.assign({}, d)); S.tk = 0; TK.fish = [[], [], [], []]; TK.eggs = [[], [], [], []]; TK.placed = [placed0, [], [], []]; bindActive(); }
 function newState(){
   const t = now(); S = { v: 1, created: t, t, coins: 300, xp: 0, lvl: 1, cap: ECON.capBase, uid: 1, fish: [], eggs: [], inv: { food: { basic: 30 }, potion: {} }, own: { pl: { p01: 1, p04: 1 }, dc: { d01: 1 } }, placed: [],
-    col: {}, hyb: {}, phen: {}, q: { claimed: {}, day: '', cnt: {} }, ach: {}, st: {}, ledger: [], journal: [], set: { sfx: true, amb: true, vol: .6, q: 'auto', tm: ECON.timeMult, dn: 1, vib: true, parts: 1 }, time: .2, feedType: 'basic', seen: {} };
+    col: {}, hyb: {}, phen: {}, q: { claimed: {}, day: '', cnt: {} }, ach: {}, st: {}, ledger: [], journal: [], set: { sfx: true, amb: true, mus: true, mvol: .5, trk: 0, vol: .6, q: 'auto', tm: ECON.timeMult, dn: 1, vib: true, parts: 1 }, time: .2, feedType: 'basic', seen: {} };
   initTanks(S.placed);
   for(const [id, grow] of [['a_clown', 30], ['a_guppy', 25], ['a_gold', 50]]){ const f = mkFish(id, { grow }); OC.fish.push(f); S.col[id] = 2; }
   placeItem('pl', 'p01', .3); placeItem('dc', 'd01', .62); placeItem('pl', 'p04', .8); S.own.pl.p01 = 0; S.own.pl.p04 = 0; S.own.dc.d01 = 0; seedTanks();
@@ -179,8 +179,8 @@ OC.buyFish = function(id){ const d = OD.SP[id]; if(!d || !d.buy) return OC.toast
   if(!spend(d.price, 'fish', 'Mua ' + d.n)) return; const first = S.col[id] !== 2; const f = mkFish(id, { grow: 0, x: rnd(100, WW - 100) }); f.y = rnd(100, 300); OC.fish.push(f); if(first) ev('speciesBought'); markOwned(id); ev('buys'); addXp(4); log('Mua cá: ' + d.n); sfx('buy'); for(let i = 0; i < 8; i++) part('spark', f.x, f.y); queueSave(); return f; };
 OC.buyEgg = function(id){ const d = OD.SP[id]; if(!d || !d.buy) return OC.toast('Loài này không bán trứng', 'err'); if(S.lvl < d.lvl) return OC.toast('Cần đạt cấp ' + d.lvl, 'err'); if(!capOk()) return OC.toast('Hồ đã đầy', 'err'); if(!guard()) return; const pr = Math.round(d.val * ECON.eggMul); if(!spend(pr, 'egg', 'Mua trứng ' + d.n)) return;
   const e = eggOf({ sp: id, g: randGenes(d), pers: randPers(d), anc: null, gen: 0, mut: [] }, rnd(80, WW - 80)); OC.eggs.push(e); ev('buys'); log('Mua trứng: ' + d.n); sfx('buy'); queueSave(); return e; };
-OC.buyFood = function(id){ const f = OD.FD[id]; if(!guard()) return; if(!spend(f.price, 'food', 'Mua ' + f.n)) return; S.inv.food[id] = (S.inv.food[id] || 0) + f.pack; ev('buys'); sfx('buy'); queueSave(); };
-OC.buyPotion = function(id){ const p = OD.PT[id]; if(!guard()) return; if(!spend(p.price, 'potion', 'Mua ' + p.n)) return; S.inv.potion[id] = (S.inv.potion[id] || 0) + 1; ev('buys'); sfx('buy'); queueSave(); };
+OC.buyFood = function(id, q){ const f = OD.FD[id]; q = Math.max(1, Math.min(50, q | 0 || 1)); if(!guard()) return; if(!spend(f.price * q, 'food', 'Mua ' + f.n + (q > 1 ? ' ×' + q : ''))) return; S.inv.food[id] = (S.inv.food[id] || 0) + f.pack * q; ev('buys'); sfx('buy'); queueSave(); };
+OC.buyPotion = function(id, q){ const p = OD.PT[id]; q = Math.max(1, Math.min(50, q | 0 || 1)); if(!guard()) return; if(!spend(p.price * q, 'potion', 'Mua ' + p.n + (q > 1 ? ' ×' + q : ''))) return; S.inv.potion[id] = (S.inv.potion[id] || 0) + q; ev('buys'); sfx('buy'); queueSave(); };
 OC.buyDeco = function(k, id){ const d = (k === 'pl' ? OD.PL : OD.DC)[id]; if(!guard()) return; if(!spend(d.price, 'decor', 'Mua ' + d.n)) return; S.own[k][id] = (S.own[k][id] || 0) + 1; ev('decorBought'); ev('buys'); log('Mua: ' + d.n); sfx('buy'); queueSave(); };
 OC.buyCap = function(){ const up = ECON.capUpgrades.find(u => u[0] > S.cap); if(!up) return OC.toast('Đã mở rộng tối đa', 'info'); if(!guard()) return; if(!spend(up[1], 'cap', 'Mở rộng hồ')) return; S.cap = up[0]; log('Mở rộng hồ: ' + up[0] + ' sinh vật'); sfx('evolve'); queueSave(); };
 OC.putDeco = function(k, id){ if(!(S.own[k][id] > 0)) return; S.own[k][id]--; const o = placeItem(k, id, rnd(.08, .92)); sfx('plop'); queueSave(); return o; };
@@ -229,7 +229,77 @@ function audio(){ if(AC) return AC; try{ AC = new (window.AudioContext || window
     const mk = (fq, type, q) => { const s = AC.createBufferSource(); s.buffer = noiseBuf; s.loop = true; const f = AC.createBiquadFilter(); f.type = type; f.frequency.value = fq; f.Q.value = q || .7; const g = AC.createGain(); g.gain.value = 0; s.connect(f); f.connect(g); g.connect(master); s.start(); return g; };
     ambG = mk(420, 'lowpass'); rainG = mk(2400, 'bandpass', .5); }catch(e){ AC = null; } return AC; }
 OC.audioUnlock = () => { if(audioHeld || document.hidden) return; const a = audio(); if(a && a.state === 'suspended') a.resume(); audioApply(); };
-function audioApply(){ if(!AC) return; if(audioHeld){ ambG.gain.value = 0; rainG.gain.value = 0; return; } const v = S.set.vol; master.gain.value = v; const rain = ['rain', 'heavy', 'storm'].includes(OC.wx.k) ? (OC.wx.k === 'rain' ? .05 : .1) : 0; ambG.gain.value = S.set.amb && OC.running ? .05 + .02 * Math.sin(OC.t * .3) : 0; rainG.gain.value = S.set.amb && OC.running ? rain : 0; }
+function audioApply(){ if(!AC) return; if(audioHeld){ ambG.gain.value = 0; rainG.gain.value = 0; musicApply(); return; } musicApply(); const v = S.set.vol; master.gain.value = v; const rain = ['rain', 'heavy', 'storm'].includes(OC.wx.k) ? (OC.wx.k === 'rain' ? .05 : .1) : 0; ambG.gain.value = S.set.amb && OC.running ? .05 + .02 * Math.sin(OC.t * .3) : 0; rainG.gain.value = S.set.amb && OC.running ? rain : 0; }
+
+/* ---------- NHẠC NỀN: 4 bản nhạc thư giãn, tạo bằng Web Audio (không cần file âm thanh) ---------- */
+const TRACKS = [
+  { n: 'Sóng Êm', d: 'Piano mềm · pad ấm áp', bpm: 56, cb: 1, tm: 'piano', sc: [0, 2, 4, 7, 9], mr: 72, ch: [{ r: 48, t: [0, 4, 7, 11] }, { r: 45, t: [0, 3, 7, 10] }, { r: 41, t: [0, 4, 7, 11] }, { r: 43, t: [0, 4, 7, 9] }], pat: [[0, 1, 2, 3, 2, 1, 2, 3], [0, 2, 1, 2, 3, 2, 1, 0], [0, -1, 2, -1, 3, -1, 2, 1], [0, 1, 2, 4, 3, 2, 1, -1]], pad: .5, bass: .5, dens: .8 },
+  { n: 'San Hô Lấp Lánh', d: 'Chuông thủy tinh · nhẹ nhàng', bpm: 68, cb: 1, tm: 'bell', sc: [0, 2, 4, 7, 9], mr: 74, ch: [{ r: 50, t: [0, 4, 7, 14] }, { r: 47, t: [0, 3, 7, 10] }, { r: 43, t: [0, 4, 7, 11] }, { r: 45, t: [0, 4, 7, 14] }], pat: [[0, -1, 2, -1, 3, -1, 4, 2], [0, 2, 4, 2, 3, 1, 2, -1], [-1, 1, -1, 3, -1, 2, 4, 5], [0, 1, 2, -1, 4, -1, 3, 1]], pad: .38, bass: .3, dens: .7 },
+  { n: 'Đêm Sao Biển', d: 'Pad sâu thẳm · ánh sao lung linh', bpm: 46, cb: 2, tm: 'glass', sc: [0, 3, 5, 7, 10], mr: 76, ch: [{ r: 45, t: [0, 3, 7, 10, 14] }, { r: 41, t: [0, 4, 7, 11] }, { r: 48, t: [0, 4, 7, 11] }, { r: 40, t: [0, 3, 7, 10] }], pat: [[0, -1, -1, 2, -1, -1, 4, -1], [-1, 1, -1, -1, 3, -1, -1, 2], [0, -1, 3, -1, -1, 4, -1, -1]], pad: .75, bass: .7, dens: .5 },
+  { n: 'Rừng Tảo Lung Linh', d: 'Đàn hạc · giai điệu trôi chảy', bpm: 64, cb: 1, tm: 'harp', sc: [0, 2, 4, 6, 7, 9, 11], mr: 70, ch: [{ r: 41, t: [0, 4, 7, 11] }, { r: 43, t: [0, 4, 7, 9] }, { r: 45, t: [0, 3, 7, 10] }, { r: 46, t: [0, 4, 7, 11] }], pat: [[0, 1, 2, 3, 4, 3, 2, 1], [0, 2, 1, 3, 2, 4, 3, 5], [3, 2, 1, 0, 1, 2, 3, 4], [0, 1, 2, 1, 3, 2, 4, 2]], pad: .42, bass: .6, dens: .85 }
+];
+OC.TRACKS = TRACKS.map(t => ({ n: t.n, d: t.d }));
+const MUS = { on: false, timer: 0, sess: null, trk: -1, step: 0, bar: 0, nextT: 0, pi: 0, mel: 0, bus: null };
+const hz = m => 440 * Math.pow(2, (m - 69) / 12);
+function musicBus(){
+  if(MUS.bus) return MUS.bus; const B = {}; B.out = AC.createGain(); B.out.gain.value = 0; B.out.connect(master);
+  B.dry = AC.createGain(); B.dry.connect(B.out); B.pad = AC.createBiquadFilter(); B.pad.type = 'lowpass'; B.pad.frequency.value = 1500; B.pad.Q.value = .4; B.pad.connect(B.dry);
+  const lfo = AC.createOscillator(), lg = AC.createGain(); lfo.frequency.value = .07; lg.gain.value = 500; lfo.connect(lg); lg.connect(B.pad.frequency); lfo.start(); B.lfo = lfo;
+  try{ const len = Math.floor(AC.sampleRate * 2.4), ir = AC.createBuffer(2, len, AC.sampleRate); for(let c = 0; c < 2; c++){ const d = ir.getChannelData(c); for(let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.6); }
+    B.rev = AC.createConvolver(); B.rev.buffer = ir; B.send = AC.createGain(); B.send.gain.value = .5; B.send.connect(B.rev); const rg = AC.createGain(); rg.gain.value = .55; B.rev.connect(rg); rg.connect(B.out); }catch(e){ B.send = null; }
+  MUS.bus = B; return B;
+}
+function mNote(sess, f, t, d, v, kind, pan){
+  const B = MUS.bus, g = AC.createGain(); let tail = g; if(pan && AC.createStereoPanner){ const p = AC.createStereoPanner(); p.pan.value = pan; g.connect(p); tail = p; }
+  tail.connect(sess); if(B.send){ const sg = AC.createGain(); sg.gain.value = .6; tail.connect(sg); sg.connect(B.send); }
+  const mk = (fr, type, vol) => { const o = AC.createOscillator(), og = AC.createGain(); o.type = type; o.frequency.value = fr; og.gain.value = vol; o.connect(og); og.connect(g); o.start(t); o.stop(t + d + .1); };
+  let atk = .006, dec = d;
+  if(kind === 'piano'){ mk(f, 'sine', 1); mk(f * 2, 'triangle', .22); mk(f * 3, 'sine', .06); dec = d * .8; }
+  else if(kind === 'bell'){ mk(f, 'sine', 1); mk(f * 2.76, 'sine', .22); mk(f * 5.4, 'sine', .07); dec = d * 1.1; }
+  else if(kind === 'glass'){ mk(f, 'sine', 1); mk(f * 1.5, 'sine', .12); atk = .05; dec = d * 1.2; }
+  else { mk(f, 'triangle', 1); mk(f * 2, 'sine', .3); dec = d * .7; }
+  g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(v, t + atk); g.gain.exponentialRampToValueAtTime(.0001, t + dec);
+  setTimeout(() => { try{ g.disconnect(); }catch(e){} }, (t - AC.currentTime + dec + .3) * 1000);
+}
+function mPad(sess, notes, t, d, v){
+  const B = MUS.bus; for(const n of notes){ const g = AC.createGain(); g.connect(B.pad); if(B.send) g.connect(B.send);
+    for(const dt of [-6, 5]){ const o = AC.createOscillator(); o.type = 'sine'; o.frequency.value = hz(n); o.detune.value = dt; o.connect(g); o.start(t); o.stop(t + d + 2.2); }
+    const o2 = AC.createOscillator(); o2.type = 'triangle'; o2.frequency.value = hz(n + 12); const g2 = AC.createGain(); g2.gain.value = .12; o2.connect(g2); g2.connect(g); o2.start(t); o2.stop(t + d + 2.2);
+    g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(v / notes.length * 1.6, t + Math.min(2.2, d * .45)); g.gain.setValueAtTime(v / notes.length * 1.6, t + d); g.gain.linearRampToValueAtTime(.0001, t + d + 2);
+    setTimeout(() => { try{ g.disconnect(); g2.disconnect(); }catch(e){} }, (t - AC.currentTime + d + 2.6) * 1000); }
+}
+function musicPump(){
+  if(!MUS.on || !AC || audioHeld || AC.state !== 'running') return; const T = TRACKS[MUS.trk], sd = 30 / T.bpm, sess = MUS.sess; if(MUS.nextT < AC.currentTime) MUS.nextT = AC.currentTime + .1;
+  while(MUS.nextT < AC.currentTime + 1.3){
+    const t = MUS.nextT, st = MUS.step, bar = MUS.bar, ci = Math.floor(bar / T.cb) % T.ch.length, C = T.ch[ci], inCh = bar % T.cb, tones = C.t.map(x => C.r + 12 + x);
+    if(st === 0){
+      if(bar % 4 === 0) MUS.pi = (Math.random() * T.pat.length) | 0;
+      if(inCh === 0){ const vo = C.t.map(x => 55 + ((C.r + x - 55) % 12 + 12) % 12).sort((a, b) => a - b); mPad(sess, vo.slice(0, 4), t, sd * 8 * T.cb, .16 * T.pad); const bs = AC.createOscillator(), bg = AC.createGain(); bs.type = 'sine'; bs.frequency.value = hz(C.r - 12); bs.connect(bg); bg.connect(MUS.bus.dry); bg.gain.setValueAtTime(.0001, t); bg.gain.linearRampToValueAtTime(.1 * T.bass, t + .5); bg.gain.setValueAtTime(.1 * T.bass, t + sd * 8 * T.cb - .3); bg.gain.linearRampToValueAtTime(.0001, t + sd * 8 * T.cb + .6); bs.start(t); bs.stop(t + sd * 8 * T.cb + .7); setTimeout(() => { try{ bg.disconnect(); }catch(e){} }, (t - AC.currentTime + sd * 8 * T.cb + 1) * 1000); }
+    }
+    const breath = bar % 16 >= 13, pat = T.pat[MUS.pi % T.pat.length], k = pat[st];
+    if(k >= 0 && !breath && Math.random() < T.dens){ const n = C.t.length, m = C.r + 12 + C.t[k % n] + 12 * Math.floor(k / n) + (T.tm === 'glass' ? 12 : 0); mNote(sess, hz(m), t, sd * (T.tm === 'glass' ? 7 : 5), (.1 + Math.random() * .05) * (st % 4 === 0 ? 1.15 : 1), T.tm, (Math.random() - .5) * .7); }
+    if((st === 0 || st === 4) && Math.random() < (breath ? .25 : .38)){ const sc = T.sc, len = sc.length * 2; MUS.mel = Math.max(0, Math.min(len - 1, MUS.mel + ((Math.random() * 5) | 0) - 2)); const m = T.mr + sc[MUS.mel % sc.length] + 12 * Math.floor(MUS.mel / sc.length) - 5; mNote(sess, hz(m), t + (Math.random() < .5 ? 0 : sd * .5), sd * 9, .11, T.tm === 'harp' ? 'bell' : T.tm, (Math.random() - .5) * .9); }
+    if(T.tm === 'glass' && Math.random() < .09) mNote(sess, hz(T.mr + 12 + T.sc[(Math.random() * T.sc.length) | 0]), t, sd * 10, .05, 'glass', (Math.random() - .5) * 1.6);
+    if(T.tm === 'harp' && st % 4 === 0 && Math.random() < .7) mNote(sess, hz(C.r - (st ? 0 : 12) + 12), t, sd * 4, .09, 'harp', -.2);
+    MUS.nextT += sd; MUS.step = (st + 1) % 8; if(MUS.step === 0) MUS.bar++;
+  }
+}
+function musicVol(){ if(!MUS.bus || !MUS.on) return; MUS.bus.out.gain.setTargetAtTime(Math.max(0, Math.min(1, S.set.mvol == null ? .5 : S.set.mvol)) * .9, AC.currentTime, .3); }
+function musicStart(){
+  if(!AC) return; const B = musicBus(); if(MUS.sess){ const o = MUS.sess; o.gain.setTargetAtTime(0, AC.currentTime, .25); setTimeout(() => { try{ o.disconnect(); }catch(e){} }, 1500); }
+  MUS.sess = AC.createGain(); MUS.sess.gain.value = 0; MUS.sess.connect(B.out); MUS.sess.gain.setTargetAtTime(1, AC.currentTime + .1, .9);
+  MUS.trk = Math.max(0, Math.min(TRACKS.length - 1, S.set.trk | 0)); MUS.step = 0; MUS.bar = 0; MUS.mel = 4; MUS.pi = 0; MUS.nextT = AC.currentTime + .15; MUS.on = true; musicVol();
+  if(!MUS.timer) MUS.timer = setInterval(musicPump, 200);
+}
+function musicStop(now){
+  MUS.on = false; clearInterval(MUS.timer); MUS.timer = 0; if(MUS.bus && AC){ try{ MUS.bus.out.gain.cancelScheduledValues(AC.currentTime); MUS.bus.out.gain.setTargetAtTime(0, AC.currentTime, now ? .01 : .12); }catch(e){} } const o = MUS.sess; MUS.sess = null; MUS.trk = -1;
+  if(o && AC){ try{ if(now) o.gain.value = 0; else o.gain.setTargetAtTime(0, AC.currentTime, .2); }catch(e){} setTimeout(() => { try{ o.disconnect(); }catch(e){} }, now ? 50 : 1500); }
+}
+function musicApply(){
+  if(!AC) return; const want = !audioHeld && S.set.mus && OC.running && !document.hidden;
+  if(want){ if(MUS.on && MUS.trk === (S.set.trk | 0)){ return; } musicStart(); } else if(MUS.on) musicStop();
+}
+OC.musicApply = () => { OC.audioUnlock(); audioApply(); musicVol(); };
 function tn(f, t, d, type = 'sine', v = .2, f2){ if(!AC || !S.set.sfx || audioHeld) return; const o = AC.createOscillator(), g = AC.createGain(), t0 = AC.currentTime + t; o.type = type; o.frequency.setValueAtTime(f, t0); if(f2) o.frequency.exponentialRampToValueAtTime(f2, t0 + d); g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(v, t0 + .01); g.gain.exponentialRampToValueAtTime(.0001, t0 + d); o.connect(g); g.connect(master); o.start(t0); o.stop(t0 + d + .05); }
 function sfx(n){
   if(OC.quiet) return;
@@ -245,7 +315,7 @@ function sfx(n){
   }
 }
 /* tạm dừng toàn bộ âm thanh khi game không còn hiển thị (nền, khóa máy, thoát); quay lại thì khôi phục theo cài đặt */
-OC.audioHold = () => { audioHeld = true; if(AC){ try{ ambG.gain.value = 0; rainG.gain.value = 0; master.gain.value = 0; AC.suspend(); }catch(e){} } };
+OC.audioHold = () => { audioHeld = true; if(AC){ musicStop(true); try{ ambG.gain.value = 0; rainG.gain.value = 0; master.gain.value = 0; AC.suspend(); }catch(e){} } };
 OC.audioRelease = () => { audioHeld = false; if(AC && !document.hidden){ try{ AC.resume(); }catch(e){} audioApply(); } };
 OC.sfx = sfx;
 /* ---------- thời tiết, ngày đêm ---------- */
@@ -505,7 +575,7 @@ function save(){ if(!S || OC.noSave) return; try{ S.t = now(); const fo = [], eo
 let saveQ = 0; function queueSave(){ clearTimeout(saveQ); saveQ = setTimeout(save, 800); }
 OC.save = save; OC.queueSave = queueSave;
 OC.exportData = () => { save(); return localStorage.getItem(KEY) || ''; };
-OC.importData = txt => { try{ const o = JSON.parse(txt); if(!o || o.v !== 1 || !Array.isArray(o.fish)) return false; localStorage.setItem(KEY, txt); OC.noSave = true; return true; }catch(e){ return false; } };
+OC.importData = txt => { try{ const o = JSON.parse(txt); if(!o || o.v !== 1 || !Array.isArray(o.fish)) return false; try{ const cur = localStorage.getItem(KEY); if(cur) localStorage.setItem(KEY + '_prev', cur); }catch(e){} localStorage.setItem(KEY, txt); OC.noSave = true; return true; }catch(e){ return false; } };
 OC.reset = () => { localStorage.removeItem(KEY); OC.noSave = true; OC.offline = null; };
 /* ---------- tiến trình khi vắng mặt (đóng app / ẩn app / rời game) ---------- */
 function applyOfflineOne(el){
@@ -528,7 +598,7 @@ function load(){
   let raw = null; try{ raw = localStorage.getItem(KEY); }catch(e){}
   if(!raw){ newState(); return; }
   try{ S = JSON.parse(raw); }catch(e){ newState(); return; }
-  S.inv = S.inv || { food: {}, potion: {} }; S.own = S.own || { pl: {}, dc: {} }; S.set = Object.assign({ sfx: true, amb: true, vol: .6, q: 'auto', tm: ECON.timeMult, dn: 1, vib: true, parts: 1 }, S.set); S.q = S.q || { claimed: {}, day: '', cnt: {} }; S.col = S.col || {}; S.hyb = S.hyb || {}; S.phen = S.phen || {}; S.st = S.st || {}; S.ach = S.ach || {};
+  S.inv = S.inv || { food: {}, potion: {} }; S.own = S.own || { pl: {}, dc: {} }; S.set = Object.assign({ sfx: true, amb: true, mus: true, mvol: .5, trk: 0, vol: .6, q: 'auto', tm: ECON.timeMult, dn: 1, vib: true, parts: 1 }, S.set); S.q = S.q || { claimed: {}, day: '', cnt: {} }; S.col = S.col || {}; S.hyb = S.hyb || {}; S.phen = S.phen || {}; S.st = S.st || {}; S.ach = S.ach || {};
   { const t0 = Array.isArray(S.tanks) ? S.tanks : null, saved = !!t0; initTanks(S.placed || []);
     S.tanks.forEach((t, i) => { const o = t0 && t0[i]; if(o){ if(o.n) t.n = String(o.n).slice(0, 20); if(i === 0) t.breed = o.breed !== false; if(i > 0) TK.placed[i] = o.placed || []; } });
     S.tk = (t0 && S.tk >= 0 && S.tk < 4) ? S.tk | 0 : 0;

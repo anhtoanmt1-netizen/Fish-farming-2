@@ -53,3 +53,9 @@ Chỉ thay đổi lớp giao diện/hình ảnh. Không đổi dữ liệu, côn
 - **Công tắc sinh sản theo từng hồ** (Hồ cá → BẬT/TẮT). Hồ 2–4 khóa ở TẮT theo yêu cầu.
 - **Âm thanh**: tự tạm dừng toàn bộ khi ẩn tab/khóa máy/thoát về màn hình chính (web + Capacitor `pause/appStateChange`), khôi phục theo cài đặt khi quay lại.
 - Save vẫn là `spx_ocean_v1`, thêm trường `tk`, `tanks`, và `tk` trên từng cá/trứng (tương thích ngược). Service worker: `ocean-life-v9`.
+
+## v3.1
+- Shop thuốc/thức ăn: chọn số lượng mua mỗi lần ×1/×3/×5/×10/×50 (cùng hàng với "Mẹo: giữ nút giá…"). Thức ăn = số hạt của gói × hệ số (vd gói cơ bản 60 hạt ×10 = 600 hạt); giá nhân tương ứng, không đủ xu thì không mua. Giữ nút vẫn mua liên tục theo hệ số đang chọn.
+- Cài đặt → Dữ liệu: Xuất file (.json, qua chia sẻ hoặc tải xuống) / Nhập file (có xác nhận, giữ bản dự phòng `spx_ocean_v1_prev`).
+- Thanh Cho ăn tự ẩn khi bấm chức năng khác (menu, ví, cài đặt, thu xu, chụp ảnh, thao tác cá…).
+- Nhạc nền: 4 bản (Sóng Êm, San Hô Lấp Lánh, Đêm Sao Biển, Rừng Tảo Lung Linh) tạo bằng Web Audio, công tắc & âm lượng riêng; tự tạm dừng khi thoát/ẩn app. SW cache `ocean-life-v10`.
