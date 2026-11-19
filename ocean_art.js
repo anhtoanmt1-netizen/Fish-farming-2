@@ -347,7 +347,9 @@ OA.skyColors = tod => { // tod 0..1: 0 bình minh, .25 ngày, .5 hoàng hôn, .7
   const day = [1, 1.0, .35, 0][i] * (1 - e) + [1, .35, 0, .4][i] * e * 0; return { c: A.map((a, k) => mix(a, B[k], e)), day: cl([.7, 1, .5, .08][i] * (1 - e) + [1, .5, .08, .7][i] * e, 0, 1) };
 };
 OA.bg = function(c, W, H, env){
-  const sk = env.sky, day = sk.day, lt = env.light, t = env.t;
+  const th = env.theme | 0, TH = [null, { c: ['#ffc2d4', '#ee6a9c', '#5a2070'], sand: '#f7dcc8', w: .6 }, { c: ['#c8f2a8', '#34b574', '#0d4f3c'], sand: '#d6dca4', w: .6 }, { c: ['#3a2a8f', '#16266f', '#060624'], sand: '#2b3d72', w: .85 }][th];
+  let sk = env.sky; if(TH) sk = { c: sk.c.map((a, k) => mix(a, TH.c[k], TH.w * (th === 3 ? 1 : .55 + .45 * sk.day))), day: th === 3 ? Math.min(sk.day, .22) : sk.day };
+  const day = sk.day, lt = env.light, t = env.t;
   // nước: dải màu trời + ngả ngọc lam ở tầng sâu
   const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, sk.c[0]); g.addColorStop(.45, sk.c[1]); g.addColorStop(1, sk.c[2]); c.fillStyle = g; c.fillRect(0, 0, W, H);
   // quầng sáng mặt trời/mặt trăng phía trên
@@ -362,7 +364,7 @@ OA.bg = function(c, W, H, env){
   // sương độ sâu: đáy nước tối và xanh hơn
   { const fg = c.createLinearGradient(0, H * .35, 0, H); fg.addColorStop(0, rgba(sk.c[1], 0)); fg.addColorStop(1, rgba(mix(sk.c[2], '#041a3a', .5), .5)); c.fillStyle = fg; c.fillRect(0, H * .35, W, H * .65); }
   // cát đáy: gradient, gợn sóng, caustics
-  const sand = mix('#f0d49a', '#223055', 1 - cl(day * 1.3, 0, 1) * .85); c.beginPath(); c.moveTo(0, H); for(let x = 0; x <= W; x += 20) c.lineTo(x, env.floor(x)); c.lineTo(W, H); c.closePath(); const sg = c.createLinearGradient(0, H * .72, 0, H); sg.addColorStop(0, sand); sg.addColorStop(1, shade(sand, -.4)); c.fillStyle = sg; c.fill(); c.lineWidth = 3; c.strokeStyle = rgba(shade(sand, .4), .55); c.stroke();
+  const sand = mix(TH ? TH.sand : '#f0d49a', '#223055', th === 3 ? .15 : 1 - cl(day * 1.3, 0, 1) * .85); c.beginPath(); c.moveTo(0, H); for(let x = 0; x <= W; x += 20) c.lineTo(x, env.floor(x)); c.lineTo(W, H); c.closePath(); const sg = c.createLinearGradient(0, H * .72, 0, H); sg.addColorStop(0, sand); sg.addColorStop(1, shade(sand, -.4)); c.fillStyle = sg; c.fill(); c.lineWidth = 3; c.strokeStyle = rgba(shade(sand, .4), .55); c.stroke();
   c.save(); c.clip(); c.lineCap = 'round';
   c.strokeStyle = rgba(shade(sand, -.18), .28); c.lineWidth = 2; for(let i = 0; i < 26; i++){ const x = (i * 97) % W, y = env.floor(x) + 14 + (i * 31 % 46), l = 26 + (i % 5) * 12; c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + l / 2, y - 4, x + l, y); c.stroke(); }
   if(day > .1){ c.strokeStyle = `rgba(255,255,230,${.2 * day * lt})`; c.lineWidth = 2.4; for(let i = 0; i < 34; i++){ const x = (i * 71 + sin(t * .5 + i) * 20) % W, y = env.floor(x) + 6 + (i * 29 % 40), l = 14 + (i % 4) * 8; c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + l * .5, y - 5 * sin(t + i), x + l, y + 1); c.stroke(); } }

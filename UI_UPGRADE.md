@@ -45,3 +45,11 @@ Chỉ thay đổi lớp giao diện/hình ảnh. Không đổi dữ liệu, côn
 - Giữ nút giá (Thức ăn, Thuốc) để mua liên tục, nhanh dần, tự dừng khi hết xu hoặc khi nhả tay/kéo cuộn. Chạm đơn vẫn mua 1 lần như cũ.
 - Chạm nhanh 5 lần vào ô xu (góc trên bên trái) để mở bảng nhập số xu tùy ý (0 đến 1.000.000.000.000, có nút điền nhanh). Chạm 1 lần vẫn mở Ví (sau khoảng 0,4 giây). Hoạt động cả khi đang mở cửa hàng ở chế độ dọc.
 - `sw.js` cache v8.
+
+## v3.0 — Nhiều hồ, chọn nhiều cá, âm thanh
+- **Cá của tôi**: nút "☑ Chọn nhiều" → tick từng cá / "Chọn tất cả" (theo bộ lọc) / "Bỏ chọn"; thanh hiển thị số cá đã chọn và tổng giá bán thực tế; "Bán đã chọn" (cá khóa được giữ lại) và "Chuyển hồ".
+- **4 hồ** (nút 🏝️ trên thanh trên): Hồ Đại Dương (hồ gốc), Rạn San Hô, Rừng Tảo Biển, Vực Huỳnh Quang — mỗi hồ có nền, trang trí, cá, trứng riêng. Dữ liệu cũ tự nạp vào hồ 1. Hồ 2–4 đầy đủ cho ăn/thu xu/thuốc/lai tạo thủ công nhưng KHÔNG tự đẻ trứng.
+- **Chuyển cá**: nút "Chuyển hồ" trong bảng thông tin cá và trong chế độ chọn nhiều; kiểm tra sức chứa (S.cap mỗi hồ), không mất/nhân đôi cá.
+- **Công tắc sinh sản theo từng hồ** (Hồ cá → BẬT/TẮT). Hồ 2–4 khóa ở TẮT theo yêu cầu.
+- **Âm thanh**: tự tạm dừng toàn bộ khi ẩn tab/khóa máy/thoát về màn hình chính (web + Capacitor `pause/appStateChange`), khôi phục theo cài đặt khi quay lại.
+- Save vẫn là `spx_ocean_v1`, thêm trường `tk`, `tanks`, và `tk` trên từng cá/trứng (tương thích ngược). Service worker: `ocean-life-v9`.

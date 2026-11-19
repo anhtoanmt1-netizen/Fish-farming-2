@@ -16,12 +16,22 @@ const baseLen = f => { const d = f.d || spec(f.sp), s = stageOf(f), p = f.grow <
 OC.baseLen = baseLen;
 
 /* ---------- trạng thái ---------- */
+/* ---------- nhiều hồ: mỗi hồ có cá / trứng / trang trí riêng; OC.fish, OC.eggs, S.placed luôn trỏ tới hồ đang xem ---------- */
+const TANK_DEF = [{ n: 'Hồ Đại Dương', th: 0, breed: true }, { n: 'Rạn San Hô', th: 1, breed: false, noBreed: true }, { n: 'Rừng Tảo Biển', th: 2, breed: false, noBreed: true }, { n: 'Vực Huỳnh Quang', th: 3, breed: false, noBreed: true }];
+const TK = { fish: [[], [], [], []], eggs: [[], [], [], []], placed: [[], [], [], []] };
+const TANK_SEED = [null, [['pl', 'p11', .18], ['pl', 'p10', .4], ['pl', 'p12', .66], ['pl', 'p13', .86], ['dc', 'd11', .3], ['dc', 'd14', .76]], [['pl', 'p01', .12], ['pl', 'p02', .34], ['pl', 'p08', .58], ['pl', 'p17', .82], ['dc', 'd19', .46], ['dc', 'd01', .7]], [['pl', 'p07', .2], ['pl', 'p14', .5], ['pl', 'p19', .8], ['dc', 'd36', .35], ['dc', 'd15', .62]]];
+const canBreed = i => { const t = S && S.tanks && S.tanks[i]; return !!(t && t.breed && !t.noBreed); };
+function allFish(){ return TK.fish[0].concat(TK.fish[1], TK.fish[2], TK.fish[3]); }
+function bindActive(){ OC.fish = TK.fish[S.tk]; OC.eggs = TK.eggs[S.tk]; S.placed = TK.placed[S.tk]; }
+function withTank(i, fn){ if(i === S.tk) return fn(); const k = S.tk; S.tk = i; bindActive(); OC.quiet = (OC.quiet | 0) + 1; try{ return fn(); } finally { OC.quiet--; S.tk = k; bindActive(); } }
+function seedTanks(){ for(let i = 1; i < 4; i++) if(!TK.placed[i].length) withTank(i, () => { for(const [k, id, x] of TANK_SEED[i]) placeItem(k, id, x); }); }
+function initTanks(placed0){ S.tanks = TANK_DEF.map(d => Object.assign({}, d)); S.tk = 0; TK.fish = [[], [], [], []]; TK.eggs = [[], [], [], []]; TK.placed = [placed0, [], [], []]; bindActive(); }
 function newState(){
   const t = now(); S = { v: 1, created: t, t, coins: 300, xp: 0, lvl: 1, cap: ECON.capBase, uid: 1, fish: [], eggs: [], inv: { food: { basic: 30 }, potion: {} }, own: { pl: { p01: 1, p04: 1 }, dc: { d01: 1 } }, placed: [],
     col: {}, hyb: {}, phen: {}, q: { claimed: {}, day: '', cnt: {} }, ach: {}, st: {}, ledger: [], journal: [], set: { sfx: true, amb: true, vol: .6, q: 'auto', tm: ECON.timeMult, dn: 1, vib: true, parts: 1 }, time: .2, feedType: 'basic', seen: {} };
-  OC.fish = []; OC.eggs = [];
+  initTanks(S.placed);
   for(const [id, grow] of [['a_clown', 30], ['a_guppy', 25], ['a_gold', 50]]){ const f = mkFish(id, { grow }); OC.fish.push(f); S.col[id] = 2; }
-  placeItem('pl', 'p01', .3); placeItem('dc', 'd01', .62); placeItem('pl', 'p04', .8); S.own.pl.p01 = 0; S.own.pl.p04 = 0; S.own.dc.d01 = 0;
+  placeItem('pl', 'p01', .3); placeItem('dc', 'd01', .62); placeItem('pl', 'p04', .8); S.own.pl.p01 = 0; S.own.pl.p04 = 0; S.own.dc.d01 = 0; seedTanks();
   log('Chào mừng đến Ocean Life! Hồ cá của bạn đã sẵn sàng.');
 }
 const PERS_KEYS = Object.keys(OD.PERS);
@@ -63,7 +73,7 @@ OC.capOk = capOk;
 const today = () => new Date().toDateString();
 function rollDay(){ if(S.q.day === today()) return; S.q.day = today(); S.q.cnt = {}; for(const q of OD.QUESTS) if(q.t === 'd'){ delete S.q.claimed[q.id]; if(S.q.ready) delete S.q.ready[q.id]; } }
 function ev(k, n = 1){ S.st[k] = (S.st[k] || 0) + n; rollDay(); S.q.cnt[k] = (S.q.cnt[k] || 0) + n; OC.checkQuests(); }
-function derived(){ const own = Object.entries(S.col).filter(([, v]) => v === 2); return { owned: own.length, owned80: OD.SPECIES.filter(s => S.col[s.id] === 2).length, legend: OC.fish.filter(f => f.d.tier === 4).length, crowns: OC.fish.filter(f => f.g.crown).length, rare3: OC.fish.some(f => f.g.rare.length >= 3) ? 1 : 0, bigfish: OC.fish.some(f => f.g.size >= 1.25 && stageOf(f) === 3) ? 1 : 0, placed: S.placed.length, placedFish: OC.fish.length, dragons: OC.fish.filter(f => /garowana|parowana|skyd|longg/.test(f.sp)).length, groupDone: 'ABCDE'.split('').some(g => OD.SPECIES.filter(s => s.g === g).every(s => S.col[s.id] === 2)) ? 1 : 0, earned: S.st.earned || 0 }; }
+function derived(){ const own = Object.entries(S.col).filter(([, v]) => v === 2); return { owned: own.length, owned80: OD.SPECIES.filter(s => S.col[s.id] === 2).length, legend: allFish().filter(f => f.d.tier === 4).length, crowns: allFish().filter(f => f.g.crown).length, rare3: allFish().some(f => f.g.rare.length >= 3) ? 1 : 0, bigfish: allFish().some(f => f.g.size >= 1.25 && stageOf(f) === 3) ? 1 : 0, placed: TK.placed.reduce((a, p) => a + p.length, 0), placedFish: allFish().length, dragons: allFish().filter(f => /garowana|parowana|skyd|longg/.test(f.sp)).length, groupDone: 'ABCDE'.split('').some(g => OD.SPECIES.filter(s => s.g === g).every(s => S.col[s.id] === 2)) ? 1 : 0, earned: S.st.earned || 0 }; }
 function progOf(q){ const dv = derived(); if(q.t === 'd') return S.q.cnt[q.k] || 0; if(q.abs || dv[q.k] !== undefined) return dv[q.k] !== undefined ? dv[q.k] : (S.st[q.k] || 0); return S.st[q.k] || 0; }
 OC.progOf = progOf; OC.derived = derived;
 OC.checkQuests = function(){
@@ -211,19 +221,20 @@ function react(f, kind){
 }
 OC.react = react;
 /* ---------- hạt hiệu ứng ---------- */
-function part(type, x, y, txt){ if(OC.parts.length > 240 * (S.set.parts || 1)) return; const p = { type, x, y, vx: rnd(-14, 14), vy: -rnd(18, 44), life: 0, max: type === 'text' ? 1.5 : type === 'ring' ? .8 : rnd(1.2, 2.4), s: rnd(3, 7), txt }; if(type === 'spark'){ p.vx = rnd(-40, 40); p.vy = rnd(-40, 20); p.max = rnd(.5, 1); } if(type === 'rain'){ p.max = .5; } OC.parts.push(p); }
+function part(type, x, y, txt){ if(OC.quiet) return; if(OC.parts.length > 240 * (S.set.parts || 1)) return; const p = { type, x, y, vx: rnd(-14, 14), vy: -rnd(18, 44), life: 0, max: type === 'text' ? 1.5 : type === 'ring' ? .8 : rnd(1.2, 2.4), s: rnd(3, 7), txt }; if(type === 'spark'){ p.vx = rnd(-40, 40); p.vy = rnd(-40, 20); p.max = rnd(.5, 1); } if(type === 'rain'){ p.max = .5; } OC.parts.push(p); }
 OC.part = part;
 /* ---------- âm thanh tổng hợp ---------- */
-let AC = null, master, ambG, rainG, noiseBuf;
+let AC = null, master, ambG, rainG, noiseBuf, audioHeld = false;
 function audio(){ if(AC) return AC; try{ AC = new (window.AudioContext || window.webkitAudioContext)(); master = AC.createGain(); master.connect(AC.destination); noiseBuf = AC.createBuffer(1, AC.sampleRate * 2, AC.sampleRate); const d = noiseBuf.getChannelData(0); for(let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     const mk = (fq, type, q) => { const s = AC.createBufferSource(); s.buffer = noiseBuf; s.loop = true; const f = AC.createBiquadFilter(); f.type = type; f.frequency.value = fq; f.Q.value = q || .7; const g = AC.createGain(); g.gain.value = 0; s.connect(f); f.connect(g); g.connect(master); s.start(); return g; };
     ambG = mk(420, 'lowpass'); rainG = mk(2400, 'bandpass', .5); }catch(e){ AC = null; } return AC; }
-OC.audioUnlock = () => { const a = audio(); if(a && a.state === 'suspended') a.resume(); audioApply(); };
-function audioApply(){ if(!AC) return; const v = S.set.vol; master.gain.value = v; const rain = ['rain', 'heavy', 'storm'].includes(OC.wx.k) ? (OC.wx.k === 'rain' ? .05 : .1) : 0; ambG.gain.value = S.set.amb && OC.running ? .05 + .02 * Math.sin(OC.t * .3) : 0; rainG.gain.value = S.set.amb && OC.running ? rain : 0; }
-function tn(f, t, d, type = 'sine', v = .2, f2){ if(!AC || !S.set.sfx) return; const o = AC.createOscillator(), g = AC.createGain(), t0 = AC.currentTime + t; o.type = type; o.frequency.setValueAtTime(f, t0); if(f2) o.frequency.exponentialRampToValueAtTime(f2, t0 + d); g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(v, t0 + .01); g.gain.exponentialRampToValueAtTime(.0001, t0 + d); o.connect(g); g.connect(master); o.start(t0); o.stop(t0 + d + .05); }
+OC.audioUnlock = () => { if(audioHeld || document.hidden) return; const a = audio(); if(a && a.state === 'suspended') a.resume(); audioApply(); };
+function audioApply(){ if(!AC) return; if(audioHeld){ ambG.gain.value = 0; rainG.gain.value = 0; return; } const v = S.set.vol; master.gain.value = v; const rain = ['rain', 'heavy', 'storm'].includes(OC.wx.k) ? (OC.wx.k === 'rain' ? .05 : .1) : 0; ambG.gain.value = S.set.amb && OC.running ? .05 + .02 * Math.sin(OC.t * .3) : 0; rainG.gain.value = S.set.amb && OC.running ? rain : 0; }
+function tn(f, t, d, type = 'sine', v = .2, f2){ if(!AC || !S.set.sfx || audioHeld) return; const o = AC.createOscillator(), g = AC.createGain(), t0 = AC.currentTime + t; o.type = type; o.frequency.setValueAtTime(f, t0); if(f2) o.frequency.exponentialRampToValueAtTime(f2, t0 + d); g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(v, t0 + .01); g.gain.exponentialRampToValueAtTime(.0001, t0 + d); o.connect(g); g.connect(master); o.start(t0); o.stop(t0 + d + .05); }
 function sfx(n){
+  if(OC.quiet) return;
   if(OC.fx) try{ OC.fx(n); }catch(e){}
-  if(!AC || !S.set.sfx) return; if(AC.state === 'suspended') AC.resume();
+  if(!AC || !S.set.sfx || audioHeld) return; if(AC.state === 'suspended') AC.resume();
   switch(n){
     case 'bubble': tn(380 + Math.random() * 200, 0, .08, 'sine', .12, 900); break; case 'plop': tn(260, 0, .1, 'sine', .15, 120); break;
     case 'coin': tn(988, 0, .08, 'square', .09); tn(1319, .07, .14, 'square', .09); break; case 'buy': tn(660, 0, .06, 'triangle', .14); tn(880, .06, .1, 'triangle', .14); break;
@@ -233,6 +244,9 @@ function sfx(n){
     case 'thunder': { const s = AC.createBufferSource(); s.buffer = noiseBuf; const f = AC.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 160; const g = AC.createGain(); g.gain.setValueAtTime(.5, AC.currentTime); g.gain.exponentialRampToValueAtTime(.001, AC.currentTime + 1.6); s.connect(f); f.connect(g); g.connect(master); s.start(); s.stop(AC.currentTime + 1.7); break; }
   }
 }
+/* tạm dừng toàn bộ âm thanh khi game không còn hiển thị (nền, khóa máy, thoát); quay lại thì khôi phục theo cài đặt */
+OC.audioHold = () => { audioHeld = true; if(AC){ try{ ambG.gain.value = 0; rainG.gain.value = 0; master.gain.value = 0; AC.suspend(); }catch(e){} } };
+OC.audioRelease = () => { audioHeld = false; if(AC && !document.hidden){ try{ AC.resume(); }catch(e){} audioApply(); } };
 OC.sfx = sfx;
 /* ---------- thời tiết, ngày đêm ---------- */
 function dayLen(){ return 360 / S.set.dn; }
@@ -287,7 +301,7 @@ function ai(f, dt, lod){
   f.fT -= dt; if(f.fT <= 0){ f.fT = .35; if(OC.food.length && !f.pair && (f.hun < 92 || f.pers.includes('foodie'))){ let best = null, bd = (f.pers.includes('fierce') ? 330 : 250) ** 2; for(const fd of OC.food){ const q = (fd.x - f.x) ** 2 + (fd.y - f.y) ** 2; if(q < bd){ bd = q; best = fd; } } if(best){ f.st = 'eat'; f.ft = best; f.bt = 4; } } }
   if(f.st === 'eat'){ const fd = f.ft; if(!fd || OC.food.indexOf(fd) < 0){ f.st = 'wander'; f.bt = rnd(.5, 2); pickWander(f); } else { tx = fd.x; ty = fd.y; mul = f.pers.includes('fierce') ? 2.2 : 1.8; if((fd.x - f.x) ** 2 + (fd.y - f.y) ** 2 < (f.len * .3 + 7) ** 2){ f.gill = 1; eatFood(f, fd); } } }
   else if(f.fleeT > 0){ mul = 1.9; tx = f.x + (f.x - P.x) * 3; ty = f.y + (f.y - P.y) * 3; }
-  else if(f.pair){ const o = OC.fish.find(q => q.id === f.pair.with); if(!o){ f.pair = null; } else { f.orb = (f.orb || 0) + dt * 1.4 * (f.id < o.id ? 1 : -1); tx = (f.x + o.x) / 2 + Math.cos(f.orb) * 36; ty = (f.y + o.y) / 2 + Math.sin(f.orb) * 22; mul = .8; if(Math.hypot(f.x - o.x, f.y - o.y) < 130){ f.pair.t -= dt; if(Math.random() < dt * 2) part('heart', f.x, f.y - 10); if(f.pair.t <= 0 && f.id < o.id) layEggs(f, o); else if(f.pair.t <= 0){ f.pair = null; } } } }
+  else if(f.pair){ const o = canBreed(S.tk) ? OC.fish.find(q => q.id === f.pair.with) : null; if(!o){ f.pair = null; } else { f.orb = (f.orb || 0) + dt * 1.4 * (f.id < o.id ? 1 : -1); tx = (f.x + o.x) / 2 + Math.cos(f.orb) * 36; ty = (f.y + o.y) / 2 + Math.sin(f.orb) * 22; mul = .8; if(Math.hypot(f.x - o.x, f.y - o.y) < 130){ f.pair.t -= dt; if(Math.random() < dt * 2) part('heart', f.x, f.y - 10); if(f.pair.t <= 0 && f.id < o.id) layEggs(f, o); else if(f.pair.t <= 0){ f.pair = null; } } } }
   else if(f.folT > 0 && pa){ mul = 1.1; tx = P.x; ty = P.y; if(OC.ptr.down) f.folT = Math.max(f.folT, .3); }
   else if(f.cirT > 0 && pa){ f.orb = (f.orb || 0) + dt * 2.6; tx = P.x + Math.cos(f.orb) * 50; ty = P.y + Math.sin(f.orb) * 32; mul = 1.2; }
   else if(f.curT > 0 && pa){ mul = 1; tx = P.x - (f.x < P.x ? 26 : -26); ty = P.y; }
@@ -333,17 +347,28 @@ function secondTick(dt, offline){
     if(s === 3){ const iv = incMs(f.d, fishLevel(f)) / (f.incBoost > t ? 1.5 : 1); let n = 0; while(f.inc.n <= t && n < ECON.maxIncomeStack){ if((f.inc.acc / Math.max(1, incAmount(f))) < ECON.maxIncomeStack){ f.inc.acc += incAmount(f); } f.inc.n += iv; n++; } if(f.inc.n < t) f.inc.n = t + iv; }
   }
   for(const e of OC.eggs.slice()){ if(t >= e.hatch) hatchEgg(e); }
-  for(const f of OC.fish) if(f.d.asex && stageOf(f) === 3 && t >= f.cd && f.hun > 45 && f.joy > 45 && capOk() && Math.random() < .02 * dt){ layEggs(f, f); }
+  if(canBreed(S.tk)) for(const f of OC.fish) if(f.d.asex && stageOf(f) === 3 && t >= f.cd && f.hun > 45 && f.joy > 45 && capOk() && Math.random() < .02 * dt){ layEggs(f, f); }
 }
 OC.secondTick = secondTick;
+function tickAll(k){
+  secondTick(k); for(let i = 0; i < 4; i++) if(i !== S.tk && (TK.fish[i].length || TK.eggs[i].length)) withTank(i, () => secondTick(k));
+  bgBr += k; if(bgBr >= 6){ bgBr = 0; for(let i = 0; i < 4; i++) if(i !== S.tk && canBreed(i) && TK.fish[i].length > 1) withTank(i, bgBreed); }
+}
+let bgBr = 0;
+/* hồ đang chạy nền (không xem): ghép cặp tức thì, vẫn tôn trọng công tắc sinh sản của hồ đó */
+function bgBreed(){
+  const t = now(), ready = OC.fish.filter(f => stageOf(f) === 3 && t >= f.cd && f.hun > 45 && f.joy > 45 && f.hp > 50 && !f.d.asex); if(ready.length < 2 || !capOk(2)) return; const used = new Set();
+  for(const a of ready.slice().sort(() => Math.random() - .5)){ if(used.has(a)) continue; const c = ready.filter(b => b !== a && !used.has(b) && compat(a, b, a.boost.compat || b.boost.compat)); if(c.length && Math.random() < .4){ const b = pick(c); if(!capOk(2)) break; used.add(a); used.add(b); layEggs(a, b); } }
+}
 function breedTick(){
+  if(!canBreed(S.tk)){ for(const f of OC.fish) if(f.pair){ f.pair = null; if(f.st === 'pair') f.st = 'wander'; } return; }
   const t = now(), ready = OC.fish.filter(f => stageOf(f) === 3 && t >= f.cd && f.hun > 45 && f.joy > 45 && f.hp > 50 && !f.pair && !f.d.asex); if(ready.length < 2 || !capOk(2)) return;
   for(const a of ready){ if(a.pair) continue; let best = null, bd = 190 * 190; for(const b of ready){ if(b === a || b.pair || !compat(a, b, a.boost.compat || b.boost.compat)) continue; const q = (a.x - b.x) ** 2 + (a.y - b.y) ** 2; if(q < bd){ bd = q; best = b; } } if(best && Math.random() < .5){ a.pair = { with: best.id, t: 7 }; best.pair = { with: a.id, t: 7 }; a.st = best.st = 'pair'; a.hid = best.hid = false; } }
 }
 /* ---------- bước mô phỏng ---------- */
 function step(dt){
   OC.t += dt; S.time = (S.time + dt / dayLen()) % 1; weatherStep(dt); spawnStep(dt); audioApply();
-  acc1 += dt; if(acc1 >= 1){ const k = acc1; acc1 = 0; secondTick(k); } acc2 += dt; if(acc2 >= 2){ acc2 = 0; breedTick(); } acc5 += dt; if(acc5 >= 5){ acc5 = 0; rollDay(); OC.checkQuests(); OC.ui.refresh && OC.ui.refresh('tick'); }
+  acc1 += dt; if(acc1 >= 1){ const k = acc1; acc1 = 0; tickAll(k); } acc2 += dt; if(acc2 >= 2){ acc2 = 0; breedTick(); } acc5 += dt; if(acc5 >= 5){ acc5 = 0; rollDay(); OC.checkQuests(); OC.ui.refresh && OC.ui.refresh('tick'); }
   buildGrid(); const big = OC.fish.length > 60; OC.frame++;
   for(const f of OC.fish){ const lod = big && f.z < .4 && (OC.frame + f.id) % 2; ai(f, lod ? dt * 2 : dt, big && f.z < .5); f.pulse2 = f.pulse > 0; }
   for(const fd of OC.food){ fd.life -= dt; fd.y += fd.vy * dt; fd.vy = Math.min(60, fd.vy + 20 * dt); fd.x += Math.sin(OC.t * 2 + fd.id) * 6 * dt; const fy = floorY(fd.x) - 6; if(fd.y > fy){ fd.y = fy; fd.vy = 0; } } OC.food = OC.food.filter(fd => fd.life > 0);
@@ -370,7 +395,7 @@ function ambient(c, t, night){
   if(!lowFx()){ c.lineWidth = 1; for(let i = 0; i < 4; i++){ const bx = WW * (.12 + i * .25) + (i % 2 ? 18 : -14), by = floorY(bx) - 4, span = WH * (.5 + (i % 3) * .1);
       for(let k = 0; k < 6; k++){ const u = ((t * (.07 + i * .006) + k / 6 + i * .17) % 1), y = by - u * span, x = bx + Math.sin(t * 1.6 + k * 2 + i) * (4 + u * 10), r = 1.2 + u * 2.6 + (k % 2) * .6, a = Math.sin(u * Math.PI) * .6; if(a < .03) continue; c.globalAlpha = a; c.strokeStyle = 'rgba(255,255,255,.9)'; c.fillStyle = 'rgba(210,245,255,.2)'; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); c.stroke(); c.fillStyle = 'rgba(255,255,255,.85)'; c.beginPath(); c.arc(x - r * .35, y - r * .35, r * .22, 0, TAU); c.fill(); } } c.globalAlpha = 1; }
   /* hạt sáng / phù du: ban đêm chuyển sang phát quang xanh–tím */
-  const col = night > .35 ? '#8ff7ff' : '#f2fdff'; c.fillStyle = col; let i = 0;
+  const th = (S.tanks[S.tk] || {}).th | 0, col = th === 3 ? '#9fffe9' : th === 1 ? '#ffe0ee' : th === 2 ? '#efffd8' : night > .35 ? '#8ff7ff' : '#f2fdff'; c.fillStyle = col; night = th === 3 ? 1 : night; let i = 0;
   for(const p of plankton){ p.x = (p.x + p.vx * .016 + WW) % WW; p.y = (p.y + p.vy * .016 + WH) % WH; const tw = .5 + .5 * Math.sin(t * 1.5 + i * 1.7); c.globalAlpha = (.16 + .3 * tw) * (night > .35 ? 1.3 : 1); c.beginPath(); c.arc(p.x, p.y, p.r, 0, TAU); c.fill();
     if(!(i++ & 3) && !lowFx()){ c.globalAlpha = (.05 + .09 * tw) * (night > .35 ? 1.6 : 1); c.beginPath(); c.arc(p.x, p.y, p.r * 4.2, 0, TAU); c.fill(); } }
   c.globalAlpha = 1;
@@ -382,7 +407,7 @@ function vignette(c){
 let bgC = null, bgT = -9;
 function drawBg(c, env){ const rf = cl(scale() * dpr * .75, .5, 1), w = Math.ceil(WW * rf), h = Math.ceil((WH + 40) * rf); if(!bgC || bgC.width !== w || bgC.height !== h){ bgC = document.createElement('canvas'); bgC.width = w; bgC.height = h; bgT = -9; } if(OC.t - bgT > .7){ bgT = OC.t; const b = bgC.getContext('2d'); b.setTransform(rf, 0, 0, rf, 0, 0); OA.bg(b, WW, WH + 40, env); } c.drawImage(bgC, 0, 0, WW, WH + 40); }
 function draw(){
-  const c = ctx, t = OC.t, sk = sky(), env = { sky: sk, t, floor: floorY, light: 1 - (['storm', 'heavy'].includes(OC.wx.k) ? .7 : OC.wx.k === 'cloud' ? .4 : OC.wx.k === 'rain' ? .5 : 0), wave: ['storm'].includes(OC.wx.k) ? 2 : OC.wx.k === 'wind' ? 1.4 : OC.wx.k === 'heavy' ? 1.2 : .4 };
+  const c = ctx, t = OC.t, sk = sky(), env = { sky: sk, t, floor: floorY, theme: (S.tanks[S.tk] || {}).th | 0, light: 1 - (['storm', 'heavy'].includes(OC.wx.k) ? .7 : OC.wx.k === 'cloud' ? .4 : OC.wx.k === 'rain' ? .5 : 0), wave: ['storm'].includes(OC.wx.k) ? 2 : OC.wx.k === 'wind' ? 1.4 : OC.wx.k === 'heavy' ? 1.2 : .4 };
   c.setTransform(dpr, 0, 0, dpr, 0, 0); const sc = scale(); c.save(); c.scale(sc, sc); c.translate(-OC.cam.x, -OC.cam.y);
   drawBg(c, env);
   const night = 1 - sk.day, sway = (OC.wx.k === 'storm' ? 2 : OC.wx.k === 'wind' ? 1.6 : OC.wx.k === 'heavy' ? 1.3 : 1) * 1;
@@ -430,8 +455,8 @@ function loop(ts){
   if(S.set.q === 'auto' && OC.fpsAvg > 30 && OC.fpsT !== 'low' && OC.frame % 60 === 0){ OC.fpsT = 'low'; S.set.parts = .5; dpr = 1; canvas.width = Math.round(vw); canvas.height = Math.round(vh); }
   if(dt > .05){ step(dt / 2); step(dt / 2); } else step(dt); draw(); raf = requestAnimationFrame(loop);
 }
-OC.start = function(){ if(running) return; running = true; if(OC.stoppedAt){ const rep = applyOffline((now() - OC.stoppedAt) / 1000); OC.stoppedAt = 0; if(rep) OC.offline = rep; } lastTs = performance.now(); OC.running = true; resize(); raf = requestAnimationFrame(loop); audioApply(); };
-OC.stop = function(){ running = false; OC.running = false; OC.stoppedAt = now(); save(); audioApply(); };
+OC.start = function(){ if(running) return; running = true; if(OC.stoppedAt){ const rep = applyOffline((now() - OC.stoppedAt) / 1000); OC.stoppedAt = 0; if(rep) OC.offline = rep; } lastTs = performance.now(); OC.running = true; resize(); raf = requestAnimationFrame(loop); OC.audioRelease(); audioApply(); };
+OC.stop = function(){ running = false; OC.running = false; OC.stoppedAt = now(); save(); OC.audioHold(); };
 /* ---------- điều khiển ---------- */
 function hitFish(w){ let best = null, bd = 1e9; for(const f of OC.fish){ const k = .74 + .36 * f.z, dx = (w.x - f.x), dy = (w.y - f.y), rx = Math.max(16, f.len * .55), ry = Math.max(14, f.len * (f.d.arch === 'fish' ? f.d.H * .5 : .42) + 6); const q = (dx / rx) ** 2 + (dy / ry) ** 2; if(q < 1 && q - f.z * .05 < bd){ bd = q; best = f; } } return best; }
 function hitCoin(w){ for(const f of OC.fish) if(f.inc.acc > 0 && f.stg === 3 && Math.hypot(w.x - f.x, w.y - (f.y - f.len * .32 - 12)) < 16) return f; return null; }
@@ -476,15 +501,15 @@ OC.focus = function(f){ const sc = scale(); OC.cam.x = f.x - vw / sc / 2; OC.cam
 const FK = ['id', 'sp', 'name', 'born', 'grow', 'hun', 'joy', 'hp', 'g', 'pers', 'fr', 'lock', 'fav', 'inc', 'cd', 'anc', 'gen', 'mut', 'boost', 'wasAdult', 'x', 'y', 'colT'];
 const EK = ['id', 'sp', 'g', 'pers', 'anc', 'gen', 'mut', 'x', 'y', 'born', 'hatch', 'rare', 'r', 'col', 'col2'];
 const pickKeys = (o, ks) => { const r = {}; for(const k of ks) r[k] = o[k]; return r; };
-function save(){ if(!S || OC.noSave) return; try{ S.t = now(); const out = Object.assign({}, S, { fish: OC.fish.map(f => pickKeys(f, FK)), eggs: OC.eggs.map(e => pickKeys(e, EK)) }); localStorage.setItem(KEY, JSON.stringify(out)); OC.saveErr = false; }catch(e){ OC.saveErr = true; } }
+function save(){ if(!S || OC.noSave) return; try{ S.t = now(); const fo = [], eo = []; for(let i = 0; i < 4; i++){ for(const f of TK.fish[i]){ const o = pickKeys(f, FK); o.tk = i; fo.push(o); } for(const e of TK.eggs[i]){ const o = pickKeys(e, EK); o.tk = i; eo.push(o); } } const out = Object.assign({}, S, { fish: fo, eggs: eo, placed: TK.placed[0], tk: S.tk, tanks: S.tanks.map((t, i) => ({ n: t.n, th: t.th, breed: t.breed, placed: i ? TK.placed[i] : undefined })) }); localStorage.setItem(KEY, JSON.stringify(out)); OC.saveErr = false; }catch(e){ OC.saveErr = true; } }
 let saveQ = 0; function queueSave(){ clearTimeout(saveQ); saveQ = setTimeout(save, 800); }
 OC.save = save; OC.queueSave = queueSave;
 OC.exportData = () => { save(); return localStorage.getItem(KEY) || ''; };
 OC.importData = txt => { try{ const o = JSON.parse(txt); if(!o || o.v !== 1 || !Array.isArray(o.fish)) return false; localStorage.setItem(KEY, txt); OC.noSave = true; return true; }catch(e){ return false; } };
 OC.reset = () => { localStorage.removeItem(KEY); OC.noSave = true; OC.offline = null; };
 /* ---------- tiến trình khi vắng mặt (đóng app / ẩn app / rời game) ---------- */
-function applyOffline(el){
-  el = Math.min(el, ECON.offlineCapH * 3600); if(!(el > 45)) return null; const t = now();
+function applyOfflineOne(el){
+  const t = now();
   const acc0 = OC.fish.reduce((s, f) => s + f.inc.acc, 0), ad0 = OC.fish.filter(f => stageOf(f) === 3).length;
   const steps = Math.min(240, Math.ceil(el / 30)), dt = el / steps;
   for(let i = 0; i < steps; i++) for(const f of OC.fish){ const care = f.hun > 25 && f.joy > 25 ? 1 : .5; f.grow = Math.min(100, f.grow + GROW_RATE(f) * dt * care); f.hun = Math.max(25, f.hun - .045 * dt * .5); f.joy = Math.max(25, f.joy - .008 * dt * .5); }
@@ -493,23 +518,61 @@ function applyOffline(el){
   const due = OC.eggs.filter(e => t >= e.hatch); due.forEach(hatchEgg);
   return { el, acc: OC.fish.reduce((s, f) => s + f.inc.acc, 0) - acc0, adults: OC.fish.filter(f => stageOf(f) === 3).length - ad0, hatched: due.length };
 }
+function applyOffline(el){
+  el = Math.min(el, ECON.offlineCapH * 3600); if(!(el > 45)) return null; const r = { el, acc: 0, adults: 0, hatched: 0 };
+  for(let i = 0; i < 4; i++){ const x = withTank(i, () => applyOfflineOne(el)); if(x){ r.acc += x.acc; r.adults += x.adults; r.hatched += x.hatched; } }
+  return r;
+}
 OC.applyOffline = applyOffline;
 function load(){
   let raw = null; try{ raw = localStorage.getItem(KEY); }catch(e){}
   if(!raw){ newState(); return; }
   try{ S = JSON.parse(raw); }catch(e){ newState(); return; }
   S.inv = S.inv || { food: {}, potion: {} }; S.own = S.own || { pl: {}, dc: {} }; S.set = Object.assign({ sfx: true, amb: true, vol: .6, q: 'auto', tm: ECON.timeMult, dn: 1, vib: true, parts: 1 }, S.set); S.q = S.q || { claimed: {}, day: '', cnt: {} }; S.col = S.col || {}; S.hyb = S.hyb || {}; S.phen = S.phen || {}; S.st = S.st || {}; S.ach = S.ach || {};
-  OC.fish = (S.fish || []).map(f => { rt(f); return f; }); OC.eggs = (S.eggs || []).map(e => e); S.fish = []; S.eggs = []; OC.food = []; OC.items = [];
+  { const t0 = Array.isArray(S.tanks) ? S.tanks : null, saved = !!t0; initTanks(S.placed || []);
+    S.tanks.forEach((t, i) => { const o = t0 && t0[i]; if(o){ if(o.n) t.n = String(o.n).slice(0, 20); if(i === 0) t.breed = o.breed !== false; if(i > 0) TK.placed[i] = o.placed || []; } });
+    S.tk = (t0 && S.tk >= 0 && S.tk < 4) ? S.tk | 0 : 0;
+    for(const f of (S.fish || [])){ const i = f.tk >= 1 && f.tk <= 3 ? f.tk | 0 : 0; delete f.tk; rt(f); TK.fish[i].push(f); }
+    for(const e of (S.eggs || [])){ const i = e.tk >= 1 && e.tk <= 3 ? e.tk | 0 : 0; delete e.tk; TK.eggs[i].push(e); }
+    bindActive(); if(!saved) seedTanks(); }
+  S.fish = []; S.eggs = []; OC.food = []; OC.items = [];
   const t = now(); const rep = applyOffline((t - (S.t || t)) / 1000); if(rep) OC.offline = rep;
   S.t = t;
 }
 /* ---------- khởi tạo ---------- */
 OC.init = function(cv){
   canvas = cv; ctx = cv.getContext('2d'); load(); for(let i = 0; i < 50; i++) plankton.push({ x: rnd(WW), y: rnd(WH), vx: rnd(-6, 6), vy: rnd(-4, 3), r: rnd(.6, 1.8) });
-  OC.booting = true; OC.fish.forEach(f => { markOwned(f.sp); }); OC.booting = false; rollDay(); if(!S.wx) pickWeather(); bindInput(); OC.checkQuests();
+  OC.booting = true; allFish().forEach(f => { markOwned(f.sp); }); OC.booting = false; rollDay(); if(!S.wx) pickWeather(); bindInput(); OC.checkQuests();
   let hiddenAt = 0;
-  document.addEventListener('visibilitychange', () => { if(document.hidden){ hiddenAt = now(); save(); } else if(hiddenAt){ const el = (now() - hiddenAt) / 1000; hiddenAt = 0; if(running && el > 45){ const rep = applyOffline(el); if(rep){ OC.offline = rep; OC.ui.offlineReport && OC.ui.offlineReport(); queueSave(); } } } });
-  window.addEventListener('pagehide', save);
+  document.addEventListener('visibilitychange', () => { if(document.hidden){ hiddenAt = now(); save(); OC.audioHold(); } else if(running) OC.audioRelease(); if(document.hidden){}  else if(hiddenAt){ const el = (now() - hiddenAt) / 1000; hiddenAt = 0; if(running && el > 45){ const rep = applyOffline(el); if(rep){ OC.offline = rep; OC.ui.offlineReport && OC.ui.offlineReport(); queueSave(); } } } });
+  window.addEventListener('pagehide', () => { save(); OC.audioHold(); }); window.addEventListener('pageshow', () => { if(running) OC.audioRelease(); }); document.addEventListener('freeze', () => OC.audioHold());
+};
+
+/* ---------- quản lý hồ: chuyển hồ, bật/tắt sinh sản, chuyển cá, bán hàng loạt ---------- */
+OC.tankIdx = () => S.tk; OC.allFish = allFish; OC.canBreed = canBreed;
+OC.tankInfo = i => ({ i, n: S.tanks[i].n, th: S.tanks[i].th, breed: canBreed(i), locked: !!S.tanks[i].noBreed, fish: TK.fish[i].length, eggs: TK.eggs[i].length, cap: S.cap, cur: i === S.tk });
+OC.setTank = function(i){
+  i = +i; if(!(i >= 0 && i < 4) || i === S.tk) return; S.tk = i; bindActive(); OC.sel = null; OC.items = []; OC.food = []; OC.parts = []; OC.mode = 'view'; pendingPlace = null; OC.cam.z = 1; OC.cam.x = 0; OC.cam.y = 0; clampCam(); clampAll(); bgT = -9;
+  queueSave(); sfx('plop'); OC.ui.refresh && OC.ui.refresh('all'); OC.ui.tankChanged && OC.ui.tankChanged();
+};
+OC.setBreed = function(i, on){
+  i = +i; const t = S.tanks[i]; if(!t) return false; if(t.noBreed){ OC.toast('Hồ này không áp dụng tự động sinh sản / đẻ trứng', 'warn'); return false; }
+  t.breed = !!on; if(!t.breed) withTank(i, () => { for(const f of OC.fish) if(f.pair){ f.pair = null; if(f.st === 'pair') f.st = 'wander'; } });
+  log(`${t.n}: ${t.breed ? 'BẬT' : 'TẮT'} tự động sinh sản`); queueSave(); OC.ui.refresh && OC.ui.refresh('all'); return true;
+};
+OC.moveFish = function(list, dest){
+  dest = +dest; if(!S.tanks[dest] || dest === S.tk) return 0; list = Array.from(new Set(list)).filter(f => OC.fish.indexOf(f) >= 0); if(!list.length) return 0;
+  const room = S.cap - (TK.fish[dest].length + TK.eggs[dest].length); if(list.length > room){ OC.toast(room > 0 ? `${S.tanks[dest].n} chỉ còn ${room} chỗ trống, hãy chọn ít cá hơn` : `${S.tanks[dest].n} đã đầy`, 'err'); return 0; }
+  const ids = new Set(list.map(f => f.id)), moved = [];
+  for(const f of OC.fish) if(f.pair && ids.has(f.pair.with) && !ids.has(f.id)){ f.pair = null; if(f.st === 'pair') f.st = 'wander'; }
+  for(const f of list){ const i = OC.fish.indexOf(f); if(i < 0) continue; OC.fish.splice(i, 1); f.pair = null; if(f.st === 'pair') f.st = 'wander'; const x = rnd(90, WW - 90); rt(f, x, rnd(110, Math.max(130, floorY(x) - 90))); f.fT = rnd(0, .4); TK.fish[dest].push(f); moved.push(f); }
+  if(OC.sel && ids.has(OC.sel.id)) OC.sel = null;
+  log(`Chuyển ${moved.length} cá sang ${S.tanks[dest].n}`); sfx('plop'); queueSave(); OC.ui.refresh && OC.ui.refresh('all'); return moved.length;
+};
+OC.sellMany = function(list){
+  list = Array.from(new Set(list)).filter(f => OC.fish.indexOf(f) >= 0); const skip = list.filter(f => f.lock).length; list = list.filter(f => !f.lock); if(!list.length){ OC.toast(skip ? 'Các cá đã chọn đều đang khóa bảo vệ' : 'Chưa chọn cá nào', 'err'); return null; }
+  let total = 0; for(const f of list){ total += sellPrice(f); const i = OC.fish.indexOf(f); if(i >= 0) OC.fish.splice(i, 1); if(OC.sel === f) OC.sel = null; }
+  earn(total, 'sale'); ev('sold', list.length); log(`Bán ${list.length} cá: +${total} xu`); sfx('coin'); queueSave(); return { n: list.length, total, skipped: skip };
 };
 OC.mkFish = mkFish; OC.rt = rt; OC.hybridOf = hybridOf; OC.markOwned = markOwned; OC.randGenes = randGenes; OC.randPers = randPers; OC.WORLD = { WW, WH };
 OC.pedigree = f => ({ self: { sp: f.sp, n: f.name, gen: f.gen }, anc: f.anc });
@@ -517,5 +580,5 @@ OC.feedFish = function(f){ if(!(S.inv.food[S.feedType] > 0)) return OC.toast('H�
 OC.rename = (f, n) => { f.name = String(n || '').trim().slice(0, 16); queueSave(); };
 OC.toggleLock = f => { f.lock = !f.lock; queueSave(); }; OC.toggleFav = f => { f.fav = !f.fav; if(f.fav) f.lock = true; queueSave(); };
 OC.ptrDrop = (x, y) => { OC.ptr.x = x; OC.ptr.y = y; OC.ptr.t = OC.t; };
-OC.toast = (m, t) => OC.ui.toast ? OC.ui.toast(m, t) : 0;
+OC.toast = (m, t) => OC.quiet ? 0 : OC.ui.toast ? OC.ui.toast(m, t) : 0;
 })();
