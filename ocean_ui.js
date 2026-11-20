@@ -236,6 +236,13 @@ html.ls .ocNav button .ni{width:30px;height:26px;margin:0}html.ls .ocNav button 
 .ocTrk .eq i{width:3px;background:#fff;border-radius:2px;height:5px;animation:ocEq 1s ease-in-out infinite}.ocTrk .eq i:nth-child(2){animation-delay:.25s}.ocTrk .eq i:nth-child(3){animation-delay:.5s}.ocTrk.off .eq i{animation:none}
 @keyframes ocEq{0%,100%{height:4px}50%{height:15px}}
 .ocFileB{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.ocAutoBox{display:flex;flex-direction:column;gap:7px}
+.ocAutoR{padding:8px 9px;border-radius:14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14)}
+.ocAutoR .hd{display:flex;align-items:center;gap:8px}.ocAutoR .hd>*:first-child{flex:none}.ocAutoR .hd>*:first-child img,.ocAutoR .hd>*:first-child svg{width:40px;height:40px}.ocAutoR .hd b{font-size:12.5px;display:block}.ocAutoR .hd small{font-size:10.5px;color:var(--mut)}
+.ocAutoR .ctl{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px}
+.ocChip{padding:7px 10px;border-radius:99px;font-size:11.5px;font-weight:900;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);color:#cfe8ff;flex:1 1 auto}
+.ocChip.on{background:linear-gradient(180deg,#7dff9b,#28b657);color:#06330f;border-color:#fff6;box-shadow:0 2px 8px rgba(40,182,87,.45)}
+.ocAutoR .mn{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:800;color:#cfe8ff}.ocAutoR .mn input{width:62px;height:30px;border-radius:10px;text-align:center;font-size:13px;padding:0 4px}
 @media (prefers-reduced-motion:reduce){.oc *{animation-duration:.01s!important;animation-iteration-count:1!important;transition-duration:.01s!important}}
 html.oc-standalone .ocTop [data-act=exit]{display:none}
 `;
@@ -282,11 +289,18 @@ function setupHoldAndCoin(){
     ct = setTimeout(() => { const k = taps; taps = 0; if(k) ACT.wallet(); }, 380);
   }, true);
 }
+function autoRows(){
+  const s = S(), a = s.auto; return OD.FOODS.map(f => { const b = a.buy[f.id], fe = a.feed[f.id];
+    return `<div class="ocAutoR"><div class="hd">${FIC(f.id)}<div><b>${f.n}</b><small>Có ${fmtN(s.inv.food[f.id] || 0)} · gói ${f.pack} hạt · ${fmtN(f.price)}¢</small></div></div>
+    <div class="ctl"><button class="ocChip ${b.on ? 'on' : ''}" data-act="autoBuy" data-id="${f.id}">🛒 Tự mua: ${b.on ? 'BẬT' : 'TẮT'}</button><label class="mn">Khi dưới<input type="text" inputmode="numeric" data-in="abMin" data-id="${f.id}" value="${b.min || ''}" placeholder="0" maxlength="4"></label><button class="ocChip ${fe ? 'on' : ''}" data-act="autoFeed" data-id="${f.id}">🍤 Tự cho ăn: ${fe ? 'BẬT' : 'TẮT'}</button></div></div>`; }).join('');
+}
 function coinEditor(){
-  const s = S(); dlg(`<h3>Chỉnh số xu</h3><p>Nhập số xu mong muốn (0 – 1.000.000.000.000). Hiện có: <b>${fmtN(s.coins)}</b></p><input type="text" inputmode="numeric" id="ocCoinIn" value="${Math.floor(s.coins)}" autocomplete="off"><div class="ocFil" style="margin:10px 0 0">${[1000, 10000, 100000, 1000000].map(v => `<button class="ocTab" data-act="coinPre" data-v="${v}">${fmtN(v)}</button>`).join('')}</div>`,
-    [{ t: 'Hủy', k: closeDlg }, { t: 'Lưu', c: 'pri', k: () => { const raw = ($('#ocCoinIn').value || '').replace(/[^\d]/g, ''); if(!raw){ toast('Hãy nhập một số', 'warn'); return; } const v = Math.min(1e12, parseInt(raw, 10)); S().coins = v; OC.queueSave(); refresh('all'); closeDlg(); toast('Đã đặt số xu: ' + fmtN(v), 'ok'); } }]);
+  const s = S(); dlg(`<h3>Chỉnh số xu</h3><p>Nhập số xu mong muốn (0 – 1.000.000.000.000). Hiện có: <b>${fmtN(s.coins)}</b></p><input type="text" inputmode="numeric" id="ocCoinIn" value="${Math.floor(s.coins)}" autocomplete="off"><div class="ocFil" style="margin:10px 0 0">${[1000, 10000, 100000, 1000000].map(v => `<button class="ocTab" data-act="coinPre" data-v="${v}">${fmtN(v)}</button>`).join('')}</div>
+    <div class="ocSec" style="margin-top:14px">🤖 Tự động (riêng từng loại thức ăn)</div><p style="font-size:11px;color:var(--mut);margin:0 0 6px;line-height:1.4"><b>Tự mua</b>: khi số hạt xuống dưới ngưỡng, game tự mua thêm cho đủ bằng ngưỡng (cần đủ xu). <b>Tự cho ăn</b>: cá đói sẽ được thả loại thức ăn đã bật; bật được nhiều loại cùng lúc.</p><div id="ocAutoBox" class="ocAutoBox">${autoRows()}</div>`,
+    [{ t: 'Đóng', k: closeDlg }, { t: 'Lưu số xu', c: 'pri', k: () => { const raw = ($('#ocCoinIn').value || '').replace(/[^\d]/g, ''); if(!raw){ toast('Hãy nhập một số', 'warn'); return; } const v = Math.min(1e12, parseInt(raw, 10)); S().coins = v; OC.queueSave(); refresh('all'); closeDlg(); toast('Đã đặt số xu: ' + fmtN(v), 'ok'); } }]);
   setTimeout(() => { const i = $('#ocCoinIn'); if(i){ i.focus(); i.select(); } }, 60);
 }
+function autoRefresh(){ const b = $('#ocAutoBox'); if(b && !$('#ocDlg').hidden){ const st = b.scrollTop; b.innerHTML = autoRows(); b.scrollTop = st; } }
 /* ---------- hoạt ảnh tương tác ---------- */
 function ripple(e){ const b = e.target.closest && e.target.closest('button'); if(!b) return; const r = b.getBoundingClientRect(), d = Math.max(r.width, r.height) * 1.7, sp = document.createElement('span'); sp.className = 'ocRip'; sp.style.cssText = `width:${d}px;height:${d}px;left:${e.clientX - r.left - d / 2}px;top:${e.clientY - r.top - d / 2}px`; b.appendChild(sp); setTimeout(() => sp.remove(), 600); }
 function burst(n, small){ if(!root || root.hidden) return; const t = now(); if(t - lastBurst < 250) return; lastBurst = t; n = Math.max(4, Math.round(n * ((S() && S().set.parts) || 1))); const L = document.createElement('div'); L.className = 'ocFxL' + (small ? ' sm' : ''); const cols = ['#ffd86b', '#5eead4', '#ff8fa3', '#b79cff', '#ffffff']; for(let i = 0; i < n; i++){ const a = Math.random() * 6.283, r = (small ? 50 : 80) + Math.random() * (small ? 70 : 150), q = document.createElement('i'); q.style.cssText = `--c:${cols[i % 5]};--x:${Math.cos(a) * r}px;--y:${Math.sin(a) * r - 30}px;--s:${4 + Math.random() * 7}px;--d:${.7 + Math.random() * .6}s`; L.appendChild(q); } root.appendChild(L); setTimeout(() => L.remove(), 1500); }
@@ -465,6 +479,7 @@ function shot(){ const cv = $('#ocC'); cv.toBlob(b => { if(!b) return toast('Kh�
 function pedHTML(a, dep = 0){ if(!a) return ''; const d = OC.spec(a.sp); return `<div>${esc(a.n || d.n)} <small>(${esc(d.n)} · F${a.gen})</small>${a.anc ? pedHTML(a.anc.a, dep + 1) + pedHTML(a.anc.b, dep + 1) : ''}</div>`; }
 /* ---------- hành động ---------- */
 const IN = {
+  abMin: (v, el) => { const n = parseInt(String(v).replace(/[^\d]/g, ''), 10) || 0; OC.autoSet('min', el.dataset.id, n); },
   fq: v => { fishF.q = v; clearTimeout(IN._t); IN._t = setTimeout(() => { const b = $('.ocShB'); if(panel && panel.name === 'fish'){ const st = b.scrollTop; b.innerHTML = fishListHTML(); b.scrollTop = st; const i = b.querySelector('[data-in=fq]'); i.focus(); i.setSelectionRange(v.length, v.length); const sel = b.querySelector('[data-ch=fsort]'); sel.value = fishF.sort; b.querySelector('[data-ch=frar]').value = fishF.rar; b.querySelector('[data-ch=fcol]').value = fishF.col; } }, 250); },
   fsort: v => { fishF.sort = v; reRender(); }, frar: v => { fishF.rar = +v; reRender(); }, fcol: v => { fishF.col = v; reRender(); },
   vol: v => { S().set.vol = v / 100; OC.queueSave(); }, mvol: v => { S().set.mvol = v / 100; OC.queueSave(); OC.musicApply(); }, mus: (v, el) => { S().set.mus = el.checked; OC.queueSave(); OC.musicApply(); reRender(); }, sfx: (v, el) => { S().set.sfx = el.checked; OC.queueSave(); }, amb: (v, el) => { S().set.amb = el.checked; OC.queueSave(); }, vib: (v, el) => { S().set.vib = el.checked; OC.queueSave(); },
@@ -494,6 +509,7 @@ function importFile(){ const i = $('#ocFileIn'); if(!i) return; i.value = ''; i.
     dlg(`<h3>Nhập dữ liệu từ file?</h3><p><b>${esc(f.name)}</b><br>Cá: ${o.fish.length} · Xu: ${fmtN(o.coins || 0)} · Cấp ${o.lvl || 1}</p><p style="color:#ffc0cc">Dữ liệu hiện tại sẽ bị thay thế (bản cũ được giữ làm bản dự phòng).</p>`, [{ t: 'Hủy', k: closeDlg }, { t: 'Nhập', c: 'pri', k: () => { if(OC.importData(txt)){ closeDlg(); toast('Đã nhập, đang tải lại…', 'ok'); setTimeout(() => location.reload(), 800); } else toast('Dữ liệu không hợp lệ', 'err'); } }]); };
   r.readAsText(f); }; i.click(); }
 const ACT = {
+  autoBuy(d){ const on = !S().auto.buy[d.id].on; OC.autoSet('buy', d.id, on); autoRefresh(); }, autoFeed(d){ OC.autoSet('feed', d.id, !S().auto.feed[d.id]); autoRefresh(); },
   expFile: exportFile, impFile: importFile,
   trkSel(d){ const st = S().set; st.trk = +d.i; st.mus = true; OC.queueSave(); OC.musicApply(); toast('Nhạc nền: ' + OC.TRACKS[+d.i].n, 'ok'); reRender(); },
   tanks: panelTanks, tankGo(d){ OC.setTank(+d.i); closeSheet(); toast('Đã vào ' + OC.tankInfo(+d.i).n, 'ok'); },

@@ -59,3 +59,6 @@ Chỉ thay đổi lớp giao diện/hình ảnh. Không đổi dữ liệu, côn
 - Cài đặt → Dữ liệu: Xuất file (.json, qua chia sẻ hoặc tải xuống) / Nhập file (có xác nhận, giữ bản dự phòng `spx_ocean_v1_prev`).
 - Thanh Cho ăn tự ẩn khi bấm chức năng khác (menu, ví, cài đặt, thu xu, chụp ảnh, thao tác cá…).
 - Nhạc nền: 4 bản (Sóng Êm, San Hô Lấp Lánh, Đêm Sao Biển, Rừng Tảo Lung Linh) tạo bằng Web Audio, công tắc & âm lượng riêng; tự tạm dừng khi thoát/ẩn app. SW cache `ocean-life-v10`.
+
+## v3.2
+- Bảng chạm nhanh 5 lần vào ô xu: thêm mục "Tự động" cho từng loại thức ăn: Tự mua (khi số hạt < ngưỡng thì tự mua thêm cho đủ ngưỡng, cần đủ xu) và Tự cho ăn (bật/tắt riêng, bật được nhiều loại cùng lúc). Cấu hình lưu trong save (`auto`), tương thích ngược. SW cache `ocean-life-v11`.

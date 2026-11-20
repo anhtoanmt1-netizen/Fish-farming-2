@@ -30,6 +30,7 @@ function newState(){
   const t = now(); S = { v: 1, created: t, t, coins: 300, xp: 0, lvl: 1, cap: ECON.capBase, uid: 1, fish: [], eggs: [], inv: { food: { basic: 30 }, potion: {} }, own: { pl: { p01: 1, p04: 1 }, dc: { d01: 1 } }, placed: [],
     col: {}, hyb: {}, phen: {}, q: { claimed: {}, day: '', cnt: {} }, ach: {}, st: {}, ledger: [], journal: [], set: { sfx: true, amb: true, mus: true, mvol: .5, trk: 0, vol: .6, q: 'auto', tm: ECON.timeMult, dn: 1, vib: true, parts: 1 }, time: .2, feedType: 'basic', seen: {} };
   initTanks(S.placed);
+  autoFix();
   for(const [id, grow] of [['a_clown', 30], ['a_guppy', 25], ['a_gold', 50]]){ const f = mkFish(id, { grow }); OC.fish.push(f); S.col[id] = 2; }
   placeItem('pl', 'p01', .3); placeItem('dc', 'd01', .62); placeItem('pl', 'p04', .8); S.own.pl.p01 = 0; S.own.pl.p04 = 0; S.own.dc.d01 = 0; seedTanks();
   log('Chào mừng đến Ocean Life! Hồ cá của bạn đã sẵn sàng.');
@@ -195,7 +196,7 @@ OC.dropFood = function(x, y){
   S.inv.food[id]--; OC.food.push({ id: S.uid++, x: cl(x, 20, WW - 20), y: Math.max(24, y), vy: 24, type: id, life: 35 }); sfx('plop'); part('ring', x, Math.max(20, y)); OC.ui.refresh && OC.ui.refresh('food'); return true;
 };
 function eatFood(f, fd){
-  const F = OD.FD[fd.type], mulFry = F.fry && stageOf(f) < 2 ? 2 : 1, mulRare = F.rare && f.d.tier >= 2 ? 1.6 : 1; OC.food.splice(OC.food.indexOf(fd), 1);
+  const F = OD.FD[fd.type], mulFry = F.fry && stageOf(f) < 2 ? 2 : 1, mulRare = F.rare && f.d.tier >= 2 ? 1.6 : 1; { const fi = OC.food.indexOf(fd); if(fi >= 0) OC.food.splice(fi, 1); }
   f.hun = Math.min(100, f.hun + F.hun * mulRare); f.joy = Math.min(100, f.joy + F.joy); if(F.grow) f.grow = Math.min(100, f.grow + F.grow * mulFry * mulRare * .3); if(F.breed) f.cd = Math.max(0, f.cd - 90000); if(F.color) f.colT = now() + 600000; if(F.glow) f.pulse = 4; if(F.inc) f.incBoost = now() + 300000;
   f.mouth = 1; f.fr = Math.min(100, f.fr + .6); ev('fed'); S.st.fedTotal = (S.st.fedTotal || 0) + 1; part('bubble', fd.x, fd.y); part('bubble', fd.x, fd.y); sfx('bubble'); if(Math.random() < .3) addXp(1); f.st = 'wander'; f.bt = rnd(1, 3);
 }
@@ -420,8 +421,27 @@ function secondTick(dt, offline){
   if(canBreed(S.tk)) for(const f of OC.fish) if(f.d.asex && stageOf(f) === 3 && t >= f.cd && f.hun > 45 && f.joy > 45 && capOk() && Math.random() < .02 * dt){ layEggs(f, f); }
 }
 OC.secondTick = secondTick;
+
+/* ---------- TỰ ĐỘNG: mua thức ăn khi xuống dưới ngưỡng, cho cá ăn tự động (cấu hình riêng từng loại) ---------- */
+function autoFix(){ const a = S.auto = S.auto || { buy: {}, feed: {} }; a.buy = a.buy || {}; a.feed = a.feed || {}; for(const f of OD.FOODS){ const b = a.buy[f.id] = Object.assign({ on: false, min: 0 }, a.buy[f.id]); b.on = !!b.on; b.min = Math.max(0, Math.min(9999, b.min | 0)); a.feed[f.id] = !!a.feed[f.id]; } }
+let afT = 0, afRR = 0, abNote = 0;
+function autoBuyTick(){
+  let bought = 0, sum = 0; for(const F of OD.FOODS){ const b = S.auto.buy[F.id]; if(!b.on || b.min <= 0) continue; const have = S.inv.food[F.id] || 0; if(have >= b.min) continue;
+    const n = Math.min(Math.ceil((b.min - have) / F.pack), Math.floor(S.coins / F.price)); if(n <= 0) continue; if(!spend(F.price * n, 'food', 'Tự động mua ' + F.n + ' ×' + n)) continue; S.inv.food[F.id] = have + F.pack * n; bought++; sum += F.price * n; }
+  if(bought){ queueSave(); OC.ui.refresh && OC.ui.refresh('food'); const t = now(); if(t - abNote > 12000){ abNote = t; OC.toast(`Tự động mua thức ăn (${bought} loại, −${sum} xu)`, 'info'); } }
+}
+function autoFeedTank(){
+  const en = OD.FOODS.filter(f => S.auto.feed[f.id]); if(!en.length || !OC.fish.length) return; const t = now(); let n = 0;
+  for(const f of OC.fish){ if(n >= 4) break; if(f.hun >= 60 || (f.aT || 0) > t) continue; const st = stageOf(f);
+    const el = en.filter(F => (S.inv.food[F.id] | 0) > 0 && (!F.fry || st < 2) && (!F.rare || f.d.tier >= 2) && (!F.inc || f.d.tier >= 3) && (!F.breed || st === 3)); if(!el.length) continue;
+    const F = el[(afRR++) % el.length]; S.inv.food[F.id]--; f.aT = t + 9000; n++;
+    if(OC.quiet) eatFood(f, { type: F.id, x: f.x, y: f.y }); else OC.food.push({ id: S.uid++, x: cl(f.x + rnd(-14, 14), 20, WW - 20), y: Math.max(24, f.y - 40), vy: 24, type: F.id, life: 35 }); }
+  if(n) OC.ui.refresh && OC.ui.refresh('food');
+}
+function autoTick(k){ if(!S.auto) return; autoBuyTick(); afT += k; if(afT >= 3){ afT = 0; for(let i = 0; i < 4; i++) if(TK.fish[i].length) withTank(i, autoFeedTank); autoBuyTick(); } }
+OC.autoSet = (kind, id, v) => { const a = S.auto, F = OD.FD[id]; if(!F) return; if(kind === 'buy'){ a.buy[id].on = !!v; if(v && !(a.buy[id].min > 0)) a.buy[id].min = F.pack * 4; } else if(kind === 'min') a.buy[id].min = Math.max(0, Math.min(9999, Math.floor(+v) || 0)); else a.feed[id] = !!v; queueSave(); };
 function tickAll(k){
-  secondTick(k); for(let i = 0; i < 4; i++) if(i !== S.tk && (TK.fish[i].length || TK.eggs[i].length)) withTank(i, () => secondTick(k));
+  autoTick(k); secondTick(k); for(let i = 0; i < 4; i++) if(i !== S.tk && (TK.fish[i].length || TK.eggs[i].length)) withTank(i, () => secondTick(k));
   bgBr += k; if(bgBr >= 6){ bgBr = 0; for(let i = 0; i < 4; i++) if(i !== S.tk && canBreed(i) && TK.fish[i].length > 1) withTank(i, bgBreed); }
 }
 let bgBr = 0;
@@ -598,7 +618,7 @@ function load(){
   let raw = null; try{ raw = localStorage.getItem(KEY); }catch(e){}
   if(!raw){ newState(); return; }
   try{ S = JSON.parse(raw); }catch(e){ newState(); return; }
-  S.inv = S.inv || { food: {}, potion: {} }; S.own = S.own || { pl: {}, dc: {} }; S.set = Object.assign({ sfx: true, amb: true, mus: true, mvol: .5, trk: 0, vol: .6, q: 'auto', tm: ECON.timeMult, dn: 1, vib: true, parts: 1 }, S.set); S.q = S.q || { claimed: {}, day: '', cnt: {} }; S.col = S.col || {}; S.hyb = S.hyb || {}; S.phen = S.phen || {}; S.st = S.st || {}; S.ach = S.ach || {};
+  S.inv = S.inv || { food: {}, potion: {} }; S.own = S.own || { pl: {}, dc: {} }; autoFix(); S.set = Object.assign({ sfx: true, amb: true, mus: true, mvol: .5, trk: 0, vol: .6, q: 'auto', tm: ECON.timeMult, dn: 1, vib: true, parts: 1 }, S.set); S.q = S.q || { claimed: {}, day: '', cnt: {} }; S.col = S.col || {}; S.hyb = S.hyb || {}; S.phen = S.phen || {}; S.st = S.st || {}; S.ach = S.ach || {};
   { const t0 = Array.isArray(S.tanks) ? S.tanks : null, saved = !!t0; initTanks(S.placed || []);
     S.tanks.forEach((t, i) => { const o = t0 && t0[i]; if(o){ if(o.n) t.n = String(o.n).slice(0, 20); if(i === 0) t.breed = o.breed !== false; if(i > 0) TK.placed[i] = o.placed || []; } });
     S.tk = (t0 && S.tk >= 0 && S.tk < 4) ? S.tk | 0 : 0;
